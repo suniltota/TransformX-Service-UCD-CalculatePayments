@@ -1,17 +1,12 @@
-package Calculations;
+package com.actualize.mortgage.ucd.calculations;
 
 import java.util.LinkedList;
 
-import MortgageModel.AdjustableInterestRate;
-import MortgageModel.AmortizingPayment;
-import MortgageModel.CashFlow;
-import MortgageModel.CompositePayment;
-import MortgageModel.Environment;
-import MortgageModel.InterestOnlyPayment;
-import MortgageModel.InterestRate;
-import MortgageModel.Loan;
-import MortgageModel.Payment;
-import utils.Functions;
+import com.actualize.mortgage.mortgagemodel.CashFlowInfo;
+import com.actualize.mortgage.mortgagemodel.CashFlowResult;
+import com.actualize.mortgage.mortgagemodel.Environment;
+import com.actualize.mortgage.mortgagemodel.Loan;
+import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
 
 public class ProjectedPayments {
 	public class Disclosure {
@@ -30,23 +25,19 @@ public class ProjectedPayments {
 		}
 
 		void combine(Disclosure pd) {
-			if (end < pd.getEnd())
+			if (end < pd.end)
 				end = pd.end;
-			if (highPI < pd.getHighPI())
-				highPI = pd.getHighPI();
-			if (lowPI > pd.getLowPI())
-				lowPI = pd.getLowPI();
+			if (highPI < pd.highPI)
+				highPI = pd.highPI;
+			if (lowPI > pd.lowPI)
+				lowPI = pd.lowPI;
 		}
 
-		int getStart() { return start; }
-		void setStart(int start) { this.start = start; }
-		int getStartYear() { return start/12 + 1; }
-		int getEnd() { return end; }
-		int getEndYear() { return (end+11)/12; }
-		void setEnd(int end) { this.end = end; }
-		double getHighPI() { return highPI; }
-		double getLowPI() { return lowPI; }
-		double getMI() { return mi; }
+		public int getStartYear() { return start/12 + 1; }
+		public int getEndYear() { return (end+11)/12; }
+		public double getHighPI() { return highPI; }
+		public double getLowPI() { return lowPI; }
+		public double getMI() { return mi; }
 	}
 	
 	private Disclosure[] payments;
@@ -55,38 +46,42 @@ public class ProjectedPayments {
 	private int maxPIFirstMonth = 0;
 	private double maxPI = 0;
 	
-	public ProjectedPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan) {
-		LinkedList<Disclosure> disclosures = generateAllDistinctPayments(baseEnv, lowEnv, highEnv, loan);
+	public ProjectedPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
+		LinkedList<Disclosure> disclosures = generateAllDistinctPayments(baseEnv, lowEnv, highEnv, loan, mi);
 		disclosures = combineSameStartYear(disclosures);
 		disclosures = consolidateThirdPayment(disclosures);
 		disclosures = fixEndYears(disclosures);
 		this.payments = disclosures.toArray(new Disclosure[disclosures.size()]);
 	}
 	
-	private LinkedList<Disclosure> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan) {
-		CashFlow base = loan.generateCashFlows(baseEnv);
-		CashFlow low = loan.generateCashFlows(lowEnv);
-		CashFlow high = loan.generateCashFlows(highEnv);
-		int periods = base.getPeriods();
+	private LinkedList<Disclosure> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
+		CashFlowResult base = loan.generateCashFlows(baseEnv);
+		mi.addMortgageInsurance(base);
+		CashFlowResult low = loan.generateCashFlows(lowEnv);
+		CashFlowResult high = loan.generateCashFlows(highEnv);
+		double oldMi = 0;
+		int periods = base.length;
 		Disclosure pd = null;
 		LinkedList<Disclosure> disclosures = new LinkedList<Disclosure>();
-		for (int i = 0; i < periods-1; i++) {
-			double lowPI = Functions.round(low.getPrincipal(i) + low.getInterest(i));
-			double highPI = Functions.round(high.getPrincipal(i) + high.getInterest(i));
-			double mi = 0;
-			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || mi != pd.getMI()) {
-				if (high.getRate(i) > maxRate) {
-					maxRateFirstMonth = i;
-					maxRate = high.getRate(i);
-				}
+		for (int i = 0; i < base.length-1; i++) {
+			double lowPI = low.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+			double miPmt = base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT);
+			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || (oldMi!= 0 && miPmt==0)) {
 				if (highPI > maxPI) {
 					maxPIFirstMonth = i;
 					maxPI = highPI;
 				}
 				if (pd != null)
-					pd.setEnd(i);
-				pd = new Disclosure(i, periods, lowPI, highPI, mi);
+					pd.end = i;
+				pd = new Disclosure(i, periods, lowPI, highPI, miPmt);
 				disclosures.add(pd);
+			}
+			oldMi = miPmt;
+			double highRate = high.getValue(i, CashFlowInfo.INTEREST_RATE);
+			if (highRate > maxRate) {
+				maxRateFirstMonth = i;
+				maxRate = highRate;
 			}
 		}
 		return disclosures;
@@ -125,8 +120,8 @@ public class ProjectedPayments {
 			Disclosure pd1 = paymentDisclosures.get(i);
 			Disclosure pd2 = paymentDisclosures.get(i+1);
 			if (pd1.getEndYear() == pd2.getStartYear()) {
-				pd1.setEnd(12*(pd2.getStartYear()-1));
-				pd2.setStart(12*(pd2.getStartYear()-1)+1);
+				pd1.end = 12*(pd2.getStartYear()-1);
+				pd2.start = 12*(pd2.getStartYear()-1)+1;
 				pd2.combine(pd1);
 			}
 		}
@@ -134,32 +129,9 @@ public class ProjectedPayments {
 	}
 	
 	public Disclosure[] getProjectedPayments() { return payments; }
-	
 	public int getMaxRateFirstMonth() { return maxRateFirstMonth; }
-
 	public double getMaxRate() { return maxRate; }
-
 	public int getMaxPIFirstMonth() { return maxPIFirstMonth; }
-
 	public double getMaxPI() { return maxPI; }
 
-	public void print() {
-		System.out.println(String.format("Max interest rate starting month: %d", getMaxRateFirstMonth()));
-		System.out.println(String.format("Max interest rate: %2.3f%%", 100*getMaxRate()));
-		System.out.println(String.format("Max principal and interest starting month: %d", getMaxPIFirstMonth()));
-		System.out.println(String.format("Max principal and interest: $%6.2f", getMaxPI()));
-		for (int i = 0; i < payments.length; i++)
-			System.out.println(String.format("%d\t%d\t%d\t%9.2f\t%9.2f\t%9.2f\t", i+1,
-					payments[i].getStartYear(), payments[i].getEndYear(), payments[i].getLowPI(), payments[i].getHighPI(), payments[i].getMI()));
-	}
-	
-	public static void main(String[] args) {
-		Payment payment1 = new InterestOnlyPayment(0.5);
-		Payment payment2 = new AmortizingPayment(360);
-		Payment compositePayment = new CompositePayment(13, payment1, 360, payment2);
-		InterestRate rate = new AdjustableInterestRate(0.05125, 60, 12, 0.02, 0.01, 0.10125, 0.02, 0.01, 0.0125);
-		Loan loan = new Loan(100000, 13+360, compositePayment, rate);
-		ProjectedPayments projectedPayments = new ProjectedPayments(new Environment(0.05125), new Environment(0.02125), new Environment(0.2), loan);
-		projectedPayments.print();
-	}
 }

@@ -1,4 +1,4 @@
-package MortgageModel;
+package com.actualize.mortgage.mortgagemodel;
 
 public class Loan {
 	private double loanAmount;
@@ -13,8 +13,8 @@ public class Loan {
 		this.interestRate = interestRate;
 	}
 
-	public CashFlow generateCashFlows(Environment environment) {
-		CashFlow cashFlow = new CashFlow(loanTerm);
+	public CashFlowResult generateCashFlows(Environment environment) {
+		CashFlowResult cashFlow = new CashFlowResult(loanTerm);
 		double balance = loanAmount;
 		boolean balanceChange = false;
 		double rate = 0;
@@ -39,12 +39,11 @@ public class Loan {
 			double interest = payment.ipmt(i, pmt, balance, rate);
 			double principal = payment.ppmt(i, pmt, balance, rate);
 
-			// Store flow
-			cashFlow.setBalance(i, balance);
-			cashFlow.setPayment(i, principal + interest);
-			cashFlow.setPrincipal(i, principal);
-			cashFlow.setRate(i, rate);
-			cashFlow.setInterest(i, interest);
+			// Store flows
+			cashFlow.addValue(i, CashFlowInfo.BALANCE, balance);
+			cashFlow.addValue(i, CashFlowInfo.PRINCIPAL_PAYMENT, principal);
+			cashFlow.addValue(i, CashFlowInfo.INTEREST_RATE, rate);
+			cashFlow.addValue(i, CashFlowInfo.INTEREST_PAYMENT, interest);
 			balance -= principal;
 		}
 		return cashFlow;

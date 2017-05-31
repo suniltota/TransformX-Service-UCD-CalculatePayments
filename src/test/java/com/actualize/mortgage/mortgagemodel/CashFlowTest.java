@@ -1,4 +1,4 @@
-package test.com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.mortgagemodel;
 
 import static org.junit.Assert.*;
 
@@ -6,7 +6,6 @@ import org.junit.Test;
 
 import com.actualize.mortgage.mortgagemodel.AdjustableInterestRate;
 import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
-import com.actualize.mortgage.mortgagemodel.CashFlow;
 import com.actualize.mortgage.mortgagemodel.Environment;
 import com.actualize.mortgage.mortgagemodel.InterestRate;
 import com.actualize.mortgage.mortgagemodel.Loan;
@@ -32,15 +31,19 @@ public class CashFlowTest {
 				firstResetCapRate, subsequentResetCapRate, lifetimeCapRate, firstResetCapRate, subsequentResetCapRate, lifetimeFloorRate);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, interestRate);
 		Environment environment = new Environment(rate);
-		CashFlow cf = loan.generateCashFlows(environment);
+		CashFlowResult cf = loan.generateCashFlows(environment);
 		
 		System.out.println(String.format("APR = %2.4f%%", 100.0*cf.apr(0)));
 		System.out.println("");
 		System.out.println("Period\t  Balance \t  Payment \t Principal\t Rate    \t Interest");
 		System.out.println("------\t----------\t----------\t----------\t-------  \t----------");
-		for (int i = 0; i < cf.getPeriods(); i++)
-			System.out.println(String.format("%d\t%10.2f\t%10.2f\t%10.2f\t%2.4f%%  \t%10.2f",
-					i+1, cf.getBalance(i), cf.getPayment(i), cf.getPrincipal(i), 100.0*cf.getRate(i), cf.getInterest(i)));
+		for (int i = 0; i < cf.length; i++)
+			System.out.println(String.format("%d\t%10.2f\t%10.2f\t%10.2f\t%2.4f%%  \t%10.2f", i+1,
+					cf.getValue(i, CashFlowInfo.BALANCE),
+					cf.getValue(i, CashFlowInfo.TOTAL_PAYMENT),
+					cf.getValue(i, CashFlowInfo.PRINCIPAL_PAYMENT),
+					cf.getValue(i, CashFlowInfo.INTEREST_RATE) * 100,
+					cf.getValue(i, CashFlowInfo.INTEREST_PAYMENT)));
 		
 		assertTrue("Success", true);
 	}

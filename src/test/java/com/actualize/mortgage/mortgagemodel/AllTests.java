@@ -1,4 +1,4 @@
-package test.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.mortgagemodel;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;

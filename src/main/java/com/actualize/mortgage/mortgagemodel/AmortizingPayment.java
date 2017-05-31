@@ -1,6 +1,6 @@
-package MortgageModel;
+package com.actualize.mortgage.mortgagemodel;
 
-import utils.Functions;
+import com.actualize.mortgage.ucd.calculationutils.Functions;
 
 public class AmortizingPayment extends Payment {
 	

@@ -1,10 +1,7 @@
-package MortgageModel;
+package com.actualize.mortgage.mortgagemodel;
 
-abstract public class MortgageInsurance {
+public abstract class MortgageInsurance {
 
-	CashFlow addMortgageInsurance(CashFlow baseCashFlow) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	public abstract CashFlowResult addMortgageInsurance(CashFlowResult baseCashFlow);
 
 }

@@ -1,4 +1,4 @@
-package test.com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.ucd.calculations;
 
 import static org.junit.Assert.*;
 
@@ -9,7 +9,9 @@ import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
 import com.actualize.mortgage.mortgagemodel.Environment;
 import com.actualize.mortgage.mortgagemodel.InterestRate;
 import com.actualize.mortgage.mortgagemodel.Loan;
+import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
 import com.actualize.mortgage.mortgagemodel.Payment;
+import com.actualize.mortgage.mortgagemodel.PrivateMortgageInsurance;
 import com.actualize.mortgage.ucd.calculations.ProjectedPayments;
 
 public class ProjectedPaymentsTest {
@@ -32,8 +34,9 @@ public class ProjectedPaymentsTest {
 				firstResetCapRate, subsequentResetCapRate, lifetimeCapRate, firstResetCapRate, subsequentResetCapRate, lifetimeFloorRate);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
 		Environment fullyIndexedEnv = new Environment(fullyIndexedRate);
+		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
-		ProjectedPayments payments = new ProjectedPayments(fullyIndexedEnv, new Environment(lifetimeFloorRate), new Environment(lifetimeCapRate), loan);
+		ProjectedPayments payments = new ProjectedPayments(fullyIndexedEnv, new Environment(lifetimeFloorRate), new Environment(lifetimeCapRate), loan, mi);
 		System.out.println(String.format("Max interest rate starting month: %d", payments.getMaxRateFirstMonth()));
 		System.out.println(String.format("Max interest rate: %2.3f%%", 100*payments.getMaxRate()));
 		System.out.println(String.format("Max principal and interest starting month: %d", payments.getMaxPIFirstMonth()));
@@ -45,6 +48,11 @@ public class ProjectedPaymentsTest {
 	
 		
 		assertTrue("Success", true);
+	}
+	
+	public static void main(String[] args) {
+		ProjectedPaymentsTest test = new ProjectedPaymentsTest();
+		test.test();
 	}
 
 }

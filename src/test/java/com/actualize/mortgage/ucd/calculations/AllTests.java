@@ -1,4 +1,4 @@
-package test.com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.ucd.calculations;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;

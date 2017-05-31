@@ -1,4 +1,4 @@
-package MortgageModel;
+package com.actualize.mortgage.mortgagemodel;
 
 public abstract class Payment {
 	

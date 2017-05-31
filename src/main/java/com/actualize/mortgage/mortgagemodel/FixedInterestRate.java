@@ -1,4 +1,4 @@
-package MortgageModel;
+package com.actualize.mortgage.mortgagemodel;
 
 public class FixedInterestRate extends InterestRate {
 	private double rate;

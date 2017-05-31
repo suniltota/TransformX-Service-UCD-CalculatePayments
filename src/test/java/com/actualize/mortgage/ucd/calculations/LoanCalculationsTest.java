@@ -1,4 +1,4 @@
-package test.com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.ucd.calculations;
 
 import static org.junit.Assert.*;
 
@@ -46,6 +46,11 @@ public class LoanCalculationsTest {
 		System.out.println(String.format("TIP: %3.3f%%", calcs.getTotalInterestPercentage()));
 		
 		assertTrue("Success", true);
+	}
+	
+	public static void main(String[] args) {
+		LoanCalculationsTest test = new LoanCalculationsTest();
+		test.test();
 	}
 
 }
