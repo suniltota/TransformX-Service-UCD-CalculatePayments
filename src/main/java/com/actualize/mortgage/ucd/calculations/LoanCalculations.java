@@ -4,6 +4,7 @@ import com.actualize.mortgage.mortgagemodel.CashFlowInfo;
 import com.actualize.mortgage.mortgagemodel.CashFlowResult;
 import com.actualize.mortgage.mortgagemodel.Environment;
 import com.actualize.mortgage.mortgagemodel.Loan;
+import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
 
 public class LoanCalculations {
 	private double fiveYearTotalOfPayments;
@@ -47,8 +48,9 @@ public class LoanCalculations {
 		return 100*value/cashFlow.getValue(0, CashFlowInfo.BALANCE);
 	}
 	
-	public LoanCalculations(Environment environment, double loanCosts, double aprCosts, double prepaidInterest, Loan loan) {
+	public LoanCalculations(Environment environment, double loanCosts, double aprCosts, double prepaidInterest, Loan loan, MortgageInsurance mi) {
 		CashFlowResult cashFlow = loan.generateCashFlows(environment);
+		mi.addMortgageInsurance(cashFlow);
 		fiveYearTotalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, 60);
 		fiveYearPrincipal = calculateFiveYearPrincipal(cashFlow);
 		totalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, loan.getLoanTerm());

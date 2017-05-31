@@ -9,7 +9,9 @@ import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
 import com.actualize.mortgage.mortgagemodel.Environment;
 import com.actualize.mortgage.mortgagemodel.InterestRate;
 import com.actualize.mortgage.mortgagemodel.Loan;
+import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
 import com.actualize.mortgage.mortgagemodel.Payment;
+import com.actualize.mortgage.mortgagemodel.PrivateMortgageInsurance;
 import com.actualize.mortgage.ucd.calculations.LoanCalculations;
 
 public class LoanCalculationsTest {
@@ -35,8 +37,9 @@ public class LoanCalculationsTest {
 				firstResetCapRate, subsequentResetCapRate, lifetimeCapRate, firstResetCapRate, subsequentResetCapRate, lifetimeFloorRate);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
 		Environment fullyIndexedEnv = new Environment(fullyIndexedRate);
+		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
-		LoanCalculations calcs = new LoanCalculations(fullyIndexedEnv, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest, loan);
+		LoanCalculations calcs = new LoanCalculations(fullyIndexedEnv, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest, loan, mi);
 		System.out.println(String.format("Five Year Total Costs: $%9.2f", calcs.getFiveYearTotal()));
 		System.out.println(String.format("Principal Paid After Five Years:  $%9.2f", calcs.getFiveYearPrincipal()));
 		System.out.println(String.format("Total of Payments: $%9.2f", calcs.getTotalOfPayments()));
