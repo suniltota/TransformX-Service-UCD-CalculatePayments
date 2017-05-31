@@ -1,5 +1,9 @@
-package com.actualize.mortgage.mortgagemodel;
-
+package com.actualize.mortgage.domainmodels;
+/**
+ * 
+ * @author tim
+ *
+ */
 public class AdjustableInterestRate extends InterestRate {
 	private double initialRate;
 	private int firstReset;

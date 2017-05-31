@@ -1,5 +1,9 @@
-package com.actualize.mortgage.mortgagemodel;
-
+package com.actualize.mortgage.domainmodels;
+/**
+ * 
+ * @author sboragala
+ *
+ */
 public class Loan {
 	private double loanAmount;
 	private int loanTerm;

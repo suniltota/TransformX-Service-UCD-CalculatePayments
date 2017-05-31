@@ -4,14 +4,14 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.actualize.mortgage.mortgagemodel.AdjustableInterestRate;
-import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
-import com.actualize.mortgage.mortgagemodel.Environment;
-import com.actualize.mortgage.mortgagemodel.InterestRate;
-import com.actualize.mortgage.mortgagemodel.Loan;
-import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
-import com.actualize.mortgage.mortgagemodel.Payment;
-import com.actualize.mortgage.mortgagemodel.PrivateMortgageInsurance;
+import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
+import com.actualize.mortgage.domainmodels.AmortizingPayment;
+import com.actualize.mortgage.domainmodels.Environment;
+import com.actualize.mortgage.domainmodels.InterestRate;
+import com.actualize.mortgage.domainmodels.Loan;
+import com.actualize.mortgage.domainmodels.MortgageInsurance;
+import com.actualize.mortgage.domainmodels.Payment;
+import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
 import com.actualize.mortgage.ucd.calculations.LoanCalculations;
 
 public class LoanCalculationsTest {

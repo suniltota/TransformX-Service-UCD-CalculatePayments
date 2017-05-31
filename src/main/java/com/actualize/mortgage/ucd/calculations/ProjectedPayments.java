@@ -2,50 +2,32 @@ package com.actualize.mortgage.ucd.calculations;
 
 import java.util.LinkedList;
 
-import com.actualize.mortgage.mortgagemodel.CashFlowInfo;
-import com.actualize.mortgage.mortgagemodel.CashFlowResult;
-import com.actualize.mortgage.mortgagemodel.Environment;
-import com.actualize.mortgage.mortgagemodel.Loan;
-import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
-
+import com.actualize.mortgage.domainmodels.CashFlowInfo;
+import com.actualize.mortgage.domainmodels.CashFlowResult;
+import com.actualize.mortgage.domainmodels.DisclosureModel;
+import com.actualize.mortgage.domainmodels.Environment;
+import com.actualize.mortgage.domainmodels.Loan;
+import com.actualize.mortgage.domainmodels.MortgageInsurance;
+/**
+ * 
+ * @author tim
+ *
+ */
 public class ProjectedPayments {
-	public class Disclosure {
-		private int start;
-		private int end;
-		private double highPI;
-		private double lowPI;
-		private double mi;
-		
-		Disclosure(int start, int end, double lowPI, double highPI, double mi) {
-			this.start = start;
-			this.end = end;
-			this.highPI = highPI;
-			this.lowPI = lowPI;
-			this.mi = mi;
-		}
-
-		void combine(Disclosure pd) {
-			if (end < pd.end)
-				end = pd.end;
-			if (highPI < pd.highPI)
-				highPI = pd.highPI;
-			if (lowPI > pd.lowPI)
-				lowPI = pd.lowPI;
-		}
-
-		public int getStartYear() { return start/12 + 1; }
-		public int getEndYear() { return (end+11)/12; }
-		public double getHighPI() { return highPI; }
-		public double getLowPI() { return lowPI; }
-		public double getMI() { return mi; }
-	}
 	
-	public final Disclosure[] payments;
+	public final DisclosureModel[] payments;
 	public final int maxRateFirstMonth;
 	public final double maxRate;
 	public final int maxPIFirstMonth;
 	public final double maxPI;
-	
+	/**
+	 * parameterized constructor to evaluate projected payments 
+	 * @param baseEnv
+	 * @param lowEnv
+	 * @param highEnv
+	 * @param loan
+	 * @param mi
+	 */
 	public ProjectedPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
 		CashFlowResult high = loan.generateCashFlows(highEnv);
 		int maxRateFirstMonth = 0;
@@ -68,43 +50,56 @@ public class ProjectedPayments {
 		this.maxRate = maxRate;
 		this.maxPIFirstMonth = maxPIFirstMonth;
 		this.maxPI = maxPI;
-		LinkedList<Disclosure> disclosures = generateAllDistinctPayments(baseEnv, lowEnv, high, loan, mi);
-		disclosures = combineSameStartYear(disclosures);
-		disclosures = consolidateThirdPayment(disclosures);
-		disclosures = fixEndYears(disclosures);
-		this.payments = disclosures.toArray(new Disclosure[disclosures.size()]);
+		LinkedList<DisclosureModel> disclosureModels = generateAllDistinctPayments(baseEnv, lowEnv, high, loan, mi);
+		disclosureModels = combineSameStartYear(disclosureModels);
+		disclosureModels = consolidateThirdPayment(disclosureModels);
+		disclosureModels = fixEndYears(disclosureModels);
+		this.payments = disclosureModels.toArray(new DisclosureModel[disclosureModels.size()]);
 	}
-	
-	private LinkedList<Disclosure> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, CashFlowResult high, Loan loan, MortgageInsurance mi) {
+	/**
+	 * 
+	 * @param baseEnv
+	 * @param lowEnv
+	 * @param high
+	 * @param loan
+	 * @param mi
+	 * @return
+	 */
+	private LinkedList<DisclosureModel> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, CashFlowResult high, Loan loan, MortgageInsurance mi) {
 		CashFlowResult base = loan.generateCashFlows(baseEnv);
 		mi.addMortgageInsurance(base);
 		CashFlowResult low = loan.generateCashFlows(lowEnv);
 		double oldMi = 0;
 		int periods = base.length;
-		Disclosure pd = null;
-		LinkedList<Disclosure> disclosures = new LinkedList<Disclosure>();
+		DisclosureModel pd = null;
+		LinkedList<DisclosureModel> disclosureModels = new LinkedList<DisclosureModel>();
 		for (int i = 0; i < base.length-1; i++) {
 			double lowPI = low.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			double miPmt = base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT);
 			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || (oldMi!= 0 && miPmt==0)) {
 				if (pd != null)
-					pd.end = i;
-				pd = new Disclosure(i, periods, lowPI, highPI, miPmt);
-				disclosures.add(pd);
+					pd.setEnd(i);
+				pd = new DisclosureModel(i, periods, lowPI, highPI, miPmt);
+				disclosureModels.add(pd);
 			}
 			oldMi = miPmt;
 		}
-		return disclosures;
+		return disclosureModels;
 	}
 	
-	LinkedList<Disclosure> combineSameStartYear(LinkedList<Disclosure> paymentDisclosures) {
+	/**
+	 * gets the start years
+	 * @param paymentDisclosures
+	 * @return list of Disclosure Models
+	 */
+	LinkedList<DisclosureModel> combineSameStartYear(LinkedList<DisclosureModel> paymentDisclosures) {
 		int current = 0;
 		int next = 1;
 		while (next < paymentDisclosures.size()) {
-			Disclosure pd1 = paymentDisclosures.get(current);
-			Disclosure pd2 = paymentDisclosures.get(next);
-			if (pd1.getStartYear() == pd2.getStartYear()) {
+			DisclosureModel pd1 = paymentDisclosures.get(current);
+			DisclosureModel pd2 = paymentDisclosures.get(next);
+			if (pd1.getStart() == pd2.getStart()) {
 				pd1.combine(pd2);
 				paymentDisclosures.remove(next);
 			} else {
@@ -116,23 +111,33 @@ public class ProjectedPayments {
 		return paymentDisclosures;
 	}
 	
-	LinkedList<Disclosure> consolidateThirdPayment(LinkedList<Disclosure> paymentDisclosures) {
+	/**
+	 * consolidates the Third Payment
+	 * @param paymentDisclosures
+	 * @return list of Disclosure Models
+	 */
+	LinkedList<DisclosureModel> consolidateThirdPayment(LinkedList<DisclosureModel> paymentDisclosures) {
 		while (paymentDisclosures.size() > 4) {
-			Disclosure pd1 = paymentDisclosures.get(2);
-			Disclosure pd2 = paymentDisclosures.get(3);
+			DisclosureModel pd1 = paymentDisclosures.get(2);
+			DisclosureModel pd2 = paymentDisclosures.get(3);
 			pd1.combine(pd2);
 			paymentDisclosures.remove(3);
 		}
 		return paymentDisclosures;
 	}
 	
-	LinkedList<Disclosure> fixEndYears(LinkedList<Disclosure> paymentDisclosures) {
+	/**
+	 * calculates the end years
+	 * @param paymentDisclosures
+	 * @return list of disclosure models
+	 */
+	LinkedList<DisclosureModel> fixEndYears(LinkedList<DisclosureModel> paymentDisclosures) {
 		for (int i = 0; i < paymentDisclosures.size() - 1; i++) {
-			Disclosure pd1 = paymentDisclosures.get(i);
-			Disclosure pd2 = paymentDisclosures.get(i+1);
-			if (pd1.getEndYear() == pd2.getStartYear()) {
-				pd1.end = 12*(pd2.getStartYear()-1);
-				pd2.start = 12*(pd2.getStartYear()-1)+1;
+			DisclosureModel pd1 = paymentDisclosures.get(i);
+			DisclosureModel pd2 = paymentDisclosures.get(i+1);
+			if (pd1.getEnd() == pd2.getStart()) {
+				pd1.setEnd(12*(pd2.getStart()-1));
+				pd2.setStart(12*(pd2.getStart()-1)+1);
 				pd2.combine(pd1);
 			}
 		}

@@ -1,4 +1,4 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodels;
 
 public class CompositePayment extends Payment {
 	private class PaymentSegment {

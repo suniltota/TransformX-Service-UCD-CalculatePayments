@@ -1,4 +1,4 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodels;
 
 public enum CashFlowInfo {
 	BALANCE("%9.2f"),

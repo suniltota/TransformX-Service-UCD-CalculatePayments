@@ -1,4 +1,4 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodels;
 
 import com.actualize.mortgage.ucd.calculationutils.Functions;
 

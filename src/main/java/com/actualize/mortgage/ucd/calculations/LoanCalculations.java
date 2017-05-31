@@ -1,11 +1,15 @@
 package com.actualize.mortgage.ucd.calculations;
 
-import com.actualize.mortgage.mortgagemodel.CashFlowInfo;
-import com.actualize.mortgage.mortgagemodel.CashFlowResult;
-import com.actualize.mortgage.mortgagemodel.Environment;
-import com.actualize.mortgage.mortgagemodel.Loan;
-import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
-
+import com.actualize.mortgage.domainmodels.CashFlowInfo;
+import com.actualize.mortgage.domainmodels.CashFlowResult;
+import com.actualize.mortgage.domainmodels.Environment;
+import com.actualize.mortgage.domainmodels.Loan;
+import com.actualize.mortgage.domainmodels.MortgageInsurance;
+/**
+ * 
+ * @author tim
+ *
+ */
 public class LoanCalculations {
 	public final double fiveYearTotalOfPayments;
 	public final double fiveYearPrincipal;

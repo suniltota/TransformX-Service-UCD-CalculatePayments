@@ -4,12 +4,14 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.actualize.mortgage.mortgagemodel.AdjustableInterestRate;
-import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
-import com.actualize.mortgage.mortgagemodel.Environment;
-import com.actualize.mortgage.mortgagemodel.InterestRate;
-import com.actualize.mortgage.mortgagemodel.Loan;
-import com.actualize.mortgage.mortgagemodel.Payment;
+import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
+import com.actualize.mortgage.domainmodels.AmortizingPayment;
+import com.actualize.mortgage.domainmodels.CashFlowInfo;
+import com.actualize.mortgage.domainmodels.CashFlowResult;
+import com.actualize.mortgage.domainmodels.Environment;
+import com.actualize.mortgage.domainmodels.InterestRate;
+import com.actualize.mortgage.domainmodels.Loan;
+import com.actualize.mortgage.domainmodels.Payment;
 
 public class CashFlowTest {
 

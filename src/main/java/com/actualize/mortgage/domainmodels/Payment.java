@@ -1,5 +1,9 @@
-package com.actualize.mortgage.mortgagemodel;
-
+package com.actualize.mortgage.domainmodels;
+/**
+ * 
+ * @author tim
+ *
+ */
 public abstract class Payment {
 	
 	public boolean isReset(int period) { return period == 0; }

@@ -1,9 +1,13 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodels;
 
 import java.util.TreeMap;
 
 import com.actualize.mortgage.ucd.calculationutils.Functions;
-
+/**
+ * 
+ * @author tim
+ *
+ */
 public class CashFlowResult {
 	private final Object[] data;
 	public final int length;

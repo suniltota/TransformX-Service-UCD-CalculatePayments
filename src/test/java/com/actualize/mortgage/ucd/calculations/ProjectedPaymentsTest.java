@@ -4,14 +4,14 @@ import static org.junit.Assert.*;
 
 import org.junit.Test;
 
-import com.actualize.mortgage.mortgagemodel.AdjustableInterestRate;
-import com.actualize.mortgage.mortgagemodel.AmortizingPayment;
-import com.actualize.mortgage.mortgagemodel.Environment;
-import com.actualize.mortgage.mortgagemodel.InterestRate;
-import com.actualize.mortgage.mortgagemodel.Loan;
-import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
-import com.actualize.mortgage.mortgagemodel.Payment;
-import com.actualize.mortgage.mortgagemodel.PrivateMortgageInsurance;
+import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
+import com.actualize.mortgage.domainmodels.AmortizingPayment;
+import com.actualize.mortgage.domainmodels.Environment;
+import com.actualize.mortgage.domainmodels.InterestRate;
+import com.actualize.mortgage.domainmodels.Loan;
+import com.actualize.mortgage.domainmodels.MortgageInsurance;
+import com.actualize.mortgage.domainmodels.Payment;
+import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
 import com.actualize.mortgage.ucd.calculations.ProjectedPayments;
 
 public class ProjectedPaymentsTest {
@@ -43,8 +43,8 @@ public class ProjectedPaymentsTest {
 		System.out.println(String.format("Max principal and interest: $%6.2f", projected.maxPI));
 		for (int i = 0; i < projected.payments.length; i++)
 			System.out.println(String.format("%d\t%d\t%d\t%9.2f\t%9.2f\t%9.2f\t", i+1,
-					projected.payments[i].getStartYear(), projected.payments[i].getEndYear(), projected.payments[i].getLowPI(),
-					projected.payments[i].getHighPI(), projected.payments[i].getMI()));
+					projected.payments[i].getStart(), projected.payments[i].getEnd(), projected.payments[i].getLowPI(),
+					projected.payments[i].getHighPI(), projected.payments[i].getMi()));
 
 		assertTrue("Success", true);
 	}
