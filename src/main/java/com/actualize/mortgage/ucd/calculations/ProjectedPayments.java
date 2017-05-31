@@ -40,25 +40,45 @@ public class ProjectedPayments {
 		public double getMI() { return mi; }
 	}
 	
-	private Disclosure[] payments;
-	private int maxRateFirstMonth = 0;
-	private double maxRate = 0;
-	private int maxPIFirstMonth = 0;
-	private double maxPI = 0;
+	public final Disclosure[] payments;
+	public final int maxRateFirstMonth;
+	public final double maxRate;
+	public final int maxPIFirstMonth;
+	public final double maxPI;
 	
 	public ProjectedPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
-		LinkedList<Disclosure> disclosures = generateAllDistinctPayments(baseEnv, lowEnv, highEnv, loan, mi);
+		CashFlowResult high = loan.generateCashFlows(highEnv);
+		int maxRateFirstMonth = 0;
+		double maxRate = -1;
+		int maxPIFirstMonth = 0;
+		double maxPI = -1;
+		for (int i = 0; i < high.length-1; i++) {
+			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+			if (highPI > maxPI) {
+				maxPIFirstMonth = i;
+				maxPI = highPI;
+			}
+			double highRate = high.getValue(i, CashFlowInfo.INTEREST_RATE);
+			if (highRate > maxRate) {
+				maxRateFirstMonth = i;
+				maxRate = highRate;
+			}
+		}
+		this.maxRateFirstMonth = maxRateFirstMonth;
+		this.maxRate = maxRate;
+		this.maxPIFirstMonth = maxPIFirstMonth;
+		this.maxPI = maxPI;
+		LinkedList<Disclosure> disclosures = generateAllDistinctPayments(baseEnv, lowEnv, high, loan, mi);
 		disclosures = combineSameStartYear(disclosures);
 		disclosures = consolidateThirdPayment(disclosures);
 		disclosures = fixEndYears(disclosures);
 		this.payments = disclosures.toArray(new Disclosure[disclosures.size()]);
 	}
 	
-	private LinkedList<Disclosure> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
+	private LinkedList<Disclosure> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, CashFlowResult high, Loan loan, MortgageInsurance mi) {
 		CashFlowResult base = loan.generateCashFlows(baseEnv);
 		mi.addMortgageInsurance(base);
 		CashFlowResult low = loan.generateCashFlows(lowEnv);
-		CashFlowResult high = loan.generateCashFlows(highEnv);
 		double oldMi = 0;
 		int periods = base.length;
 		Disclosure pd = null;
@@ -68,21 +88,12 @@ public class ProjectedPayments {
 			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			double miPmt = base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT);
 			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || (oldMi!= 0 && miPmt==0)) {
-				if (highPI > maxPI) {
-					maxPIFirstMonth = i;
-					maxPI = highPI;
-				}
 				if (pd != null)
 					pd.end = i;
 				pd = new Disclosure(i, periods, lowPI, highPI, miPmt);
 				disclosures.add(pd);
 			}
 			oldMi = miPmt;
-			double highRate = high.getValue(i, CashFlowInfo.INTEREST_RATE);
-			if (highRate > maxRate) {
-				maxRateFirstMonth = i;
-				maxRate = highRate;
-			}
 		}
 		return disclosures;
 	}
@@ -127,11 +138,5 @@ public class ProjectedPayments {
 		}
 		return paymentDisclosures;
 	}
-	
-	public Disclosure[] getProjectedPayments() { return payments; }
-	public int getMaxRateFirstMonth() { return maxRateFirstMonth; }
-	public double getMaxRate() { return maxRate; }
-	public int getMaxPIFirstMonth() { return maxPIFirstMonth; }
-	public double getMaxPI() { return maxPI; }
 
 }

@@ -36,17 +36,16 @@ public class ProjectedPaymentsTest {
 		Environment fullyIndexedEnv = new Environment(fullyIndexedRate);
 		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
-		ProjectedPayments payments = new ProjectedPayments(fullyIndexedEnv, new Environment(lifetimeFloorRate), new Environment(lifetimeCapRate), loan, mi);
-		System.out.println(String.format("Max interest rate starting month: %d", payments.getMaxRateFirstMonth()));
-		System.out.println(String.format("Max interest rate: %2.3f%%", 100*payments.getMaxRate()));
-		System.out.println(String.format("Max principal and interest starting month: %d", payments.getMaxPIFirstMonth()));
-		System.out.println(String.format("Max principal and interest: $%6.2f", payments.getMaxPI()));
-		for (int i = 0; i < payments.getProjectedPayments().length; i++)
+		ProjectedPayments projected = new ProjectedPayments(fullyIndexedEnv, new Environment(lifetimeFloorRate), new Environment(lifetimeCapRate), loan, mi);
+		System.out.println(String.format("Max interest rate starting month: %d", projected.maxRateFirstMonth));
+		System.out.println(String.format("Max interest rate: %2.3f%%", 100*projected.maxRate));
+		System.out.println(String.format("Max principal and interest starting month: %d", projected.maxPIFirstMonth));
+		System.out.println(String.format("Max principal and interest: $%6.2f", projected.maxPI));
+		for (int i = 0; i < projected.payments.length; i++)
 			System.out.println(String.format("%d\t%d\t%d\t%9.2f\t%9.2f\t%9.2f\t", i+1,
-					payments.getProjectedPayments()[i].getStartYear(), payments.getProjectedPayments()[i].getEndYear(),
-					payments.getProjectedPayments()[i].getLowPI(), payments.getProjectedPayments()[i].getHighPI(), payments.getProjectedPayments()[i].getMI()));
-	
-		
+					projected.payments[i].getStartYear(), projected.payments[i].getEndYear(), projected.payments[i].getLowPI(),
+					projected.payments[i].getHighPI(), projected.payments[i].getMI()));
+
 		assertTrue("Success", true);
 	}
 	

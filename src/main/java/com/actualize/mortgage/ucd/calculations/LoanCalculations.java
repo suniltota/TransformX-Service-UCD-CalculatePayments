@@ -7,13 +7,13 @@ import com.actualize.mortgage.mortgagemodel.Loan;
 import com.actualize.mortgage.mortgagemodel.MortgageInsurance;
 
 public class LoanCalculations {
-	private double fiveYearTotalOfPayments;
-	private double fiveYearPrincipal;
-	private double totalOfPayments;
-	private double amountFinanced;
-	private double financeCharge;
-	private double apr;
-	private double totalInterestPercentage;
+	public final double fiveYearTotalOfPayments;
+	public final double fiveYearPrincipal;
+	public final double totalOfPayments;
+	public final double amountFinanced;
+	public final double financeCharge;
+	public final double apr;
+	public final double totalInterestPercentage;
 	
 	static public double calculateFiveYearPrincipal(CashFlowResult cashFlow) {
 		double value = cashFlow.getValue(0, CashFlowInfo.BALANCE);
@@ -59,13 +59,5 @@ public class LoanCalculations {
 		apr = 100*cashFlow.apr(aprCosts);
 		totalInterestPercentage = calculateTotalInterestPercentage(cashFlow, prepaidInterest);
 	}
-	
-	public double getFiveYearTotal() { return fiveYearTotalOfPayments; }
-	public double getFiveYearPrincipal() { return fiveYearPrincipal; }
-	public double getTotalOfPayments() { return totalOfPayments; }
-	public double getAmountFinanced() { return amountFinanced; }
-	public double getFinanceCharge() { return financeCharge; }
-	public double getApr() { return apr; }
-	public double getTotalInterestPercentage() { return totalInterestPercentage; }
 
 }

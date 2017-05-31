@@ -40,13 +40,13 @@ public class LoanCalculationsTest {
 		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
 		LoanCalculations calcs = new LoanCalculations(fullyIndexedEnv, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest, loan, mi);
-		System.out.println(String.format("Five Year Total Costs: $%9.2f", calcs.getFiveYearTotal()));
-		System.out.println(String.format("Principal Paid After Five Years:  $%9.2f", calcs.getFiveYearPrincipal()));
-		System.out.println(String.format("Total of Payments: $%9.2f", calcs.getTotalOfPayments()));
-		System.out.println(String.format("Finance Charge: $%9.2f", calcs.getAmountFinanced()));
-		System.out.println(String.format("Amount Financed: $%9.2f", calcs.getFinanceCharge()));
-		System.out.println(String.format("APR: %3.3f%%", calcs.getApr()));
-		System.out.println(String.format("TIP: %3.3f%%", calcs.getTotalInterestPercentage()));
+		System.out.println(String.format("Five Year Total Costs: $%9.2f", calcs.fiveYearTotalOfPayments));
+		System.out.println(String.format("Principal Paid After Five Years:  $%9.2f", calcs.fiveYearPrincipal));
+		System.out.println(String.format("Total of Payments: $%9.2f", calcs.totalOfPayments));
+		System.out.println(String.format("Finance Charge: $%9.2f", calcs.amountFinanced));
+		System.out.println(String.format("Amount Financed: $%9.2f", calcs.financeCharge));
+		System.out.println(String.format("APR: %3.3f%%", calcs.apr));
+		System.out.println(String.format("TIP: %3.3f%%", calcs.totalInterestPercentage));
 		
 		assertTrue("Success", true);
 	}
