@@ -175,12 +175,17 @@ public class CalculatePayments {
 	}
 	
 	private static String addNamespace(String path, String namespace) {
-		String[] nodes = path.split("/");
-		for (int i = 0; i < nodes.length; i++)
-//			nodes[i] = "*[local-name()='" + nodes[i] + "']";
-			if (!"".equals(namespace) && !"".equals(nodes[i]) && nodes[i].indexOf(':') == -1)
-				nodes[i] = namespace + ":" + nodes[i];		
-		return String.join("/", nodes);
+		if ("".equals(namespace))
+			return path;
+		String[] outer = path.split("/");
+		for (int i = 0; i < outer.length; i++) {
+			String[] inner = outer[i].split("[");
+			for (int j = 0; j < inner.length; j++)
+				if (!"".equals(inner[j]) && inner[j].indexOf(':') == -1)
+					inner[j] = namespace + ":" + inner[j];
+			outer[i] = String.join("[", inner);
+		}
+		return String.join("/", outer);
 	}
 	
 	private static String getNameSpaceFromURL(Node node, String url) {
@@ -192,7 +197,8 @@ public class CalculatePayments {
 		}
 		return "";
 	}
-	
+
+	/*
 	public static void main(String[] args) {
 		try {
 			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_6830011666.xml";
@@ -205,4 +211,5 @@ public class CalculatePayments {
 			e.printStackTrace();
 		}
 	}
+	*/
 }
