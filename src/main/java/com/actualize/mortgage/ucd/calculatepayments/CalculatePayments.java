@@ -36,7 +36,8 @@ public class CalculatePayments {
 	private LinkedList<CalculationError> errors = new LinkedList<CalculationError>();
 
 	public Document calculate(String xmldoc) {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();  
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
         DocumentBuilder builder;  
         try  
         {  
@@ -55,9 +56,9 @@ public class CalculatePayments {
 		
 		// Obtain calculation parameters
 		// TODO:  LOAN_DETAIL/{ BalloonIndicator, InterestOnlyIndicator }
-		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY/MATURITY_RULE/LoanMaturityPeriodCount", mismo), null);
-		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null);
-		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION/AMORTIZATION_RULE/AmortizationType", mismo), "");
+		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY/MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
+		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
+		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION/AMORTIZATION_RULE/AmortizationType", mismo), ""); // REQUIRED
 		InterestRate rate = null;
 		switch (amortizationType) {
 			case "Fixed":
@@ -83,7 +84,7 @@ public class CalculatePayments {
 
 		// Insert results
 		Node integratedDisclosure = getNode(root, "//INTEGRATED_DISCLOSURE");
-		Node projectedPayments = getNode(integratedDisclosure, "//PROJECTED_PAYMENTS");
+		Node projectedPayments = getNode(integratedDisclosure, "PROJECTED_PAYMENTS");
 		if (projectedPayments != null)
 			integratedDisclosure.removeChild(projectedPayments);
 		projectedPayments = integratedDisclosure.appendChild(doc.createElement(addNamespace("PROJECTED_PAYMENTS", mismo)));
@@ -107,6 +108,7 @@ public class CalculatePayments {
 			if (maxPI != minPI)
 				projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentPrincipalAndInterestMinimumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", minPI).trim()));
 		}
+		// TODO: insert max and calculations
 		
 		return doc;
 	}
@@ -116,18 +118,18 @@ public class CalculatePayments {
 	}
 	
 	private InterestRate createAdjustableInterestRate(Node root, String mismo) {
-		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0;
-		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null) - 1;
-		int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType=First]/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null);
-		double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType=First]/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0;
-		double subsequentResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType=Subsequent]/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0;
-		double lifetimeCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercent", mismo), null) / 100.0;
-		double lifetimeFloor = getDoubleValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FloorRatePercent", mismo), null) / 100.0;
-		return new AdjustableInterestRate(initialRate, firstResetTerm, subsequentResetTerm, firstResetCap, subsequentResetCap, lifetimeCap, firstResetCap, subsequentResetCap, lifetimeFloor);
+		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null) - 1; // REQUIRED, if AmortizationType=AdjustableRate
+		int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
+		double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		double subsequentResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='Subsequent']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		double lifetimeCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		double lifetimeFloor = getDoubleValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FloorRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		return new AdjustableInterestRate(initialRate, firstResetTerm, subsequentResetTerm, firstResetCap, subsequentResetCap, lifetimeCap, firstResetCap, subsequentResetCap, lifetimeFloor); // REQUIRED, if AmortizationType=AdjustableRate
 	}
 	
 	private InterestRate createFixedInterestRate(Node root, String mismo) {
-		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null);
+		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null); // REQUIRED, if AmortizationType=Fixed
 		return new FixedInterestRate(rate);
 	}
 	
@@ -179,7 +181,7 @@ public class CalculatePayments {
 			return path;
 		String[] outer = path.split("/");
 		for (int i = 0; i < outer.length; i++) {
-			String[] inner = outer[i].split("[");
+			String[] inner = outer[i].split("\\[");
 			for (int j = 0; j < inner.length; j++)
 				if (!"".equals(inner[j]) && inner[j].indexOf(':') == -1)
 					inner[j] = namespace + ":" + inner[j];
@@ -192,13 +194,17 @@ public class CalculatePayments {
 		NamedNodeMap attributes = node.getAttributes();
 		for (int i = 0; i < attributes.getLength(); i++) {
 			Node attr = attributes.item(i);
-			if (attr.getNodeType() == Node.ATTRIBUTE_NODE && url.equals(attr.getNamespaceURI()))
+			if (attr.getNodeType() == Node.ATTRIBUTE_NODE && url.equals(attr.getNodeValue())) {
+				String xmlns = attr.getNodeName();
+				int index = xmlns.indexOf(':');
+				if (index == -1)
 					return attr.getNodeName();
+				return xmlns.substring(index+1);
+			}
 		}
 		return "";
 	}
 
-	/*
 	public static void main(String[] args) {
 		try {
 			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_6830011666.xml";
@@ -211,5 +217,4 @@ public class CalculatePayments {
 			e.printStackTrace();
 		}
 	}
-	*/
 }

@@ -71,7 +71,8 @@ public class ProjectedPayments {
 		Environment lowEnv = new Environment(loan.interestRate.getMinRate());
 		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
 		CashFlowResult base = loan.generateCashFlows(baseEnv);
-		mi.addMortgageInsurance(base);
+		if (mi != null)
+			mi.addMortgageInsurance(base);
 		CashFlowResult low = loan.generateCashFlows(lowEnv);
 		CashFlowResult high = loan.generateCashFlows(highEnv);
 		double oldMi = 0;

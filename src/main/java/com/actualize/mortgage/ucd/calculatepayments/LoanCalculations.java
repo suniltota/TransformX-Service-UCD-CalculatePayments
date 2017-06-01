@@ -55,7 +55,8 @@ public class LoanCalculations {
 	public LoanCalculations(Loan loan, MortgageInsurance mi, double fullyIndexedRate,  double loanCosts, double aprCosts, double prepaidInterest) {
 		Environment env = new Environment(fullyIndexedRate);
 		CashFlowResult cashFlow = loan.generateCashFlows(env);
-		mi.addMortgageInsurance(cashFlow);
+		if (mi != null)
+			mi.addMortgageInsurance(cashFlow);
 		fiveYearTotalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, 60);
 		fiveYearPrincipal = calculateFiveYearPrincipal(cashFlow);
 		totalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, loan.loanTerm);
