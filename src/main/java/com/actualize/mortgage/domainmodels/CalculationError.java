@@ -2,6 +2,7 @@ package com.actualize.mortgage.domainmodels;
 
 public class CalculationError {
 	public enum CalculationErrorType {
+		INTERNAL_ERROR("internal error"),
 		MISSING_DATA("calculation is missing required input data"),
 		NOT_IMPLEMENTED("calculation not implemented"),
 		OTHER("other calculation error");
