@@ -1,4 +1,4 @@
-package com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.ucd.calculatepayments;
 
 import java.util.LinkedList;
 
@@ -17,7 +17,6 @@ public class ProjectedPayments {
 	
 	public final DisclosureModel[] payments;
 	public final int maxRateFirstMonth;
-	public final double maxRate;
 	public final int maxPIFirstMonth;
 	public final double maxPI;
 	/**
@@ -28,7 +27,9 @@ public class ProjectedPayments {
 	 * @param loan
 	 * @param mi
 	 */
-	public ProjectedPayments(Environment baseEnv, Environment lowEnv, Environment highEnv, Loan loan, MortgageInsurance mi) {
+	public ProjectedPayments(Loan loan, MortgageInsurance mi) {
+		// TODO start: pull this code out into a separate calculation class
+		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
 		CashFlowResult high = loan.generateCashFlows(highEnv);
 		int maxRateFirstMonth = 0;
 		double maxRate = -1;
@@ -47,10 +48,10 @@ public class ProjectedPayments {
 			}
 		}
 		this.maxRateFirstMonth = maxRateFirstMonth;
-		this.maxRate = maxRate;
 		this.maxPIFirstMonth = maxPIFirstMonth;
 		this.maxPI = maxPI;
-		LinkedList<DisclosureModel> disclosureModels = generateAllDistinctPayments(baseEnv, lowEnv, high, loan, mi);
+		// TODO end:
+		LinkedList<DisclosureModel> disclosureModels = generateAllDistinctPayments(loan, mi);
 		disclosureModels = combineSameStartYear(disclosureModels);
 		disclosureModels = consolidateThirdPayment(disclosureModels);
 		disclosureModels = fixEndYears(disclosureModels);
@@ -65,10 +66,14 @@ public class ProjectedPayments {
 	 * @param mi
 	 * @return
 	 */
-	private LinkedList<DisclosureModel> generateAllDistinctPayments(Environment baseEnv, Environment lowEnv, CashFlowResult high, Loan loan, MortgageInsurance mi) {
+	private LinkedList<DisclosureModel> generateAllDistinctPayments(Loan loan, MortgageInsurance mi) {
+		Environment baseEnv = new Environment(loan.interestRate.getInitialRate());
+		Environment lowEnv = new Environment(loan.interestRate.getMinRate());
+		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
 		CashFlowResult base = loan.generateCashFlows(baseEnv);
 		mi.addMortgageInsurance(base);
 		CashFlowResult low = loan.generateCashFlows(lowEnv);
+		CashFlowResult high = loan.generateCashFlows(highEnv);
 		double oldMi = 0;
 		int periods = base.length;
 		DisclosureModel pd = null;

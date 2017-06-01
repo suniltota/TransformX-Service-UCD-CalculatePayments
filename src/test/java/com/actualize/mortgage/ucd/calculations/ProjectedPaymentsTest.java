@@ -6,13 +6,12 @@ import org.junit.Test;
 
 import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
 import com.actualize.mortgage.domainmodels.AmortizingPayment;
-import com.actualize.mortgage.domainmodels.Environment;
 import com.actualize.mortgage.domainmodels.InterestRate;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
 import com.actualize.mortgage.domainmodels.Payment;
 import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
-import com.actualize.mortgage.ucd.calculations.ProjectedPayments;
+import com.actualize.mortgage.ucd.calculatepayments.ProjectedPayments;
 
 public class ProjectedPaymentsTest {
 
@@ -27,18 +26,16 @@ public class ProjectedPaymentsTest {
 		double subsequentResetCapRate = 0.02;
 		double lifetimeCapRate = 0.075;
 		double lifetimeFloorRate = 0.0225;
-		double fullyIndexedRate = 0.03;
 		
 		Payment payment = new AmortizingPayment(loanTerm);
 		InterestRate rate = new AdjustableInterestRate(initialRate, firstResetMonthsCount, subsequentResetMonthsCount,
 				firstResetCapRate, subsequentResetCapRate, lifetimeCapRate, firstResetCapRate, subsequentResetCapRate, lifetimeFloorRate);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
-		Environment fullyIndexedEnv = new Environment(fullyIndexedRate);
 		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
-		ProjectedPayments projected = new ProjectedPayments(fullyIndexedEnv, new Environment(lifetimeFloorRate), new Environment(lifetimeCapRate), loan, mi);
+		ProjectedPayments projected = new ProjectedPayments(loan, mi);
 		System.out.println(String.format("Max interest rate starting month: %d", projected.maxRateFirstMonth));
-		System.out.println(String.format("Max interest rate: %2.3f%%", 100*projected.maxRate));
+		System.out.println(String.format("Max interest rate: %2.3f%%", 100*loan.interestRate.getMaxRate()));
 		System.out.println(String.format("Max principal and interest starting month: %d", projected.maxPIFirstMonth));
 		System.out.println(String.format("Max principal and interest: $%6.2f", projected.maxPI));
 		for (int i = 0; i < projected.payments.length; i++)

@@ -1,4 +1,4 @@
-package com.actualize.mortgage.ucd.calculations;
+package com.actualize.mortgage.ucd.calculatepayments;
 
 import com.actualize.mortgage.domainmodels.CashFlowInfo;
 import com.actualize.mortgage.domainmodels.CashFlowResult;
@@ -52,12 +52,13 @@ public class LoanCalculations {
 		return 100*value/cashFlow.getValue(0, CashFlowInfo.BALANCE);
 	}
 	
-	public LoanCalculations(Environment environment, double loanCosts, double aprCosts, double prepaidInterest, Loan loan, MortgageInsurance mi) {
-		CashFlowResult cashFlow = loan.generateCashFlows(environment);
+	public LoanCalculations(Loan loan, MortgageInsurance mi, double fullyIndexedRate,  double loanCosts, double aprCosts, double prepaidInterest) {
+		Environment env = new Environment(fullyIndexedRate);
+		CashFlowResult cashFlow = loan.generateCashFlows(env);
 		mi.addMortgageInsurance(cashFlow);
 		fiveYearTotalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, 60);
 		fiveYearPrincipal = calculateFiveYearPrincipal(cashFlow);
-		totalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, loan.getLoanTerm());
+		totalOfPayments = totalOfPayments(loanCosts + prepaidInterest, cashFlow, loan.loanTerm);
 		amountFinanced = amountFinanced(aprCosts + prepaidInterest, cashFlow);
 		financeCharge = financeCharge(aprCosts + prepaidInterest, cashFlow);
 		apr = 100*cashFlow.apr(aprCosts);

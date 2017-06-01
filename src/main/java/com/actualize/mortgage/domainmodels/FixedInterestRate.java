@@ -13,6 +13,21 @@ public class FixedInterestRate extends InterestRate {
 	}
 
 	@Override
+	public double getInitialRate() {
+		return rate;
+	}
+
+	@Override
+	public double getMaxRate() {
+		return rate;
+	}
+
+	@Override
+	public double getMinRate() {
+		return rate;
+	}
+
+	@Override
 	public boolean isReset(int period) {
 		return period == 0;
 	}

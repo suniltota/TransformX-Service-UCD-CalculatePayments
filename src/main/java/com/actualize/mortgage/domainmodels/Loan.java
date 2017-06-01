@@ -5,10 +5,10 @@ package com.actualize.mortgage.domainmodels;
  *
  */
 public class Loan {
-	private double loanAmount;
-	private int loanTerm;
-	private Payment payment;
-	private InterestRate interestRate;
+	public final double loanAmount;
+	public final int loanTerm;
+	public final Payment payment;
+	public final InterestRate interestRate;
 	
 	public Loan(double loanAmount, int loanTerm, Payment payment, InterestRate interestRate) {
 		this.loanAmount = loanAmount;
@@ -52,6 +52,4 @@ public class Loan {
 		}
 		return cashFlow;
 	}
-	
-	public int getLoanTerm() { return loanTerm; }
 }

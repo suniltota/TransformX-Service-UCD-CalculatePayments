@@ -60,6 +60,21 @@ public class AdjustableInterestRate extends InterestRate {
 	}
 
 	@Override
+	public double getInitialRate() {
+		return initialRate;
+	}
+
+	@Override
+	public double getMaxRate() {
+		return lifetimeCap;
+	}
+
+	@Override
+	public double getMinRate() {
+		return lifetimeFloor;
+	}
+
+	@Override
 	public boolean isReset(int period) {
 		if (period == 0)
 			return true;
@@ -67,4 +82,5 @@ public class AdjustableInterestRate extends InterestRate {
 			return false;
 		return (period - firstReset) % subsequentReset == 0;
 	}
+
 }

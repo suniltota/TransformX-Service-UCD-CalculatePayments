@@ -6,13 +6,12 @@ import org.junit.Test;
 
 import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
 import com.actualize.mortgage.domainmodels.AmortizingPayment;
-import com.actualize.mortgage.domainmodels.Environment;
 import com.actualize.mortgage.domainmodels.InterestRate;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
 import com.actualize.mortgage.domainmodels.Payment;
 import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
-import com.actualize.mortgage.ucd.calculations.LoanCalculations;
+import com.actualize.mortgage.ucd.calculatepayments.LoanCalculations;
 
 public class LoanCalculationsTest {
 
@@ -36,10 +35,9 @@ public class LoanCalculationsTest {
 		InterestRate rate = new AdjustableInterestRate(initialRate, firstResetMonthsCount, subsequentResetMonthsCount,
 				firstResetCapRate, subsequentResetCapRate, lifetimeCapRate, firstResetCapRate, subsequentResetCapRate, lifetimeFloorRate);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
-		Environment fullyIndexedEnv = new Environment(fullyIndexedRate);
 		MortgageInsurance mi = new PrivateMortgageInsurance(140, 120, .006, 240, .004, 360, .002);
 		
-		LoanCalculations calcs = new LoanCalculations(fullyIndexedEnv, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest, loan, mi);
+		LoanCalculations calcs = new LoanCalculations(loan, mi, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
 		System.out.println(String.format("Five Year Total Costs: $%9.2f", calcs.fiveYearTotalOfPayments));
 		System.out.println(String.format("Principal Paid After Five Years:  $%9.2f", calcs.fiveYearPrincipal));
 		System.out.println(String.format("Total of Payments: $%9.2f", calcs.totalOfPayments));

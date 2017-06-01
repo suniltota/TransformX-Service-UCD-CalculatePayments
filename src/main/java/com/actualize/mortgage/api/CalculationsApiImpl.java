@@ -1,8 +1,8 @@
 package com.actualize.mortgage.api;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -18,16 +18,10 @@ public class CalculationsApiImpl {
 	
 	private static final Logger LOGGER = Logger.getLogger(CalculationsApiImpl.class.getName());
    
-	@RequestMapping(value = "/projectedpayments", method = { RequestMethod.GET })
-	public String createProjectedPayments() throws Exception
-	{
-		return "this api should return projected payments";
-	}
-	
-	@RequestMapping(value = "/loanterms", method = { RequestMethod.GET })
-	public String createLoanCalculations() throws Exception
-	{
-		return "this api should return loanterms";
+	@RequestMapping(value = "/calculatepayments", method = { RequestMethod.GET })
+	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
+		LOGGER.log(Level.INFO, "Service call: /calculatepayments");
+        return null;
 	}
 
 }
