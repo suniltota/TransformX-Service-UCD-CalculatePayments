@@ -1,7 +1,15 @@
 package com.actualize.mortgage.api;
 
+import java.io.ByteArrayOutputStream;
+import java.io.StringWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,13 +29,21 @@ public class CalculationsApiImpl {
 	
 	private static final Logger LOGGER = Logger.getLogger(CalculationsApiImpl.class.getName());
    
-	@RequestMapping(value = "/calculatepayments", method = { RequestMethod.GET })
+	@RequestMapping(value = "/calculatepayments", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
 		LOGGER.log(Level.INFO, "Service call: /calculatepayments");
 		CalculatePayments calculator = new CalculatePayments();
         Document doc = calculator.calculate(xmldoc);
-        // TODO: convert doc to string and return?
-        return null;
+        
+        Transformer tr = TransformerFactory.newInstance().newTransformer();
+	        tr.setOutputProperty(OutputKeys.INDENT, "yes");
+	        tr.setOutputProperty(OutputKeys.METHOD, "xml");
+	        tr.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+	        tr.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+        StreamResult result = new StreamResult(new StringWriter());
+        	tr.transform(new DOMSource(doc), result);
+        
+        return result.getWriter().toString();
 	}
 
 }
