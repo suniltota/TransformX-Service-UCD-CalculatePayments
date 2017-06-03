@@ -8,6 +8,7 @@ import com.actualize.mortgage.domainmodels.DisclosureModel;
 import com.actualize.mortgage.domainmodels.Environment;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
+import com.actualize.mortgage.ucd.calculationutils.Functions;
 /**
  * 
  * @author tim
@@ -80,9 +81,9 @@ public class ProjectedPayments {
 		DisclosureModel pd = null;
 		LinkedList<DisclosureModel> disclosureModels = new LinkedList<DisclosureModel>();
 		for (int i = 0; i < base.length-1; i++) {
-			double lowPI = low.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
-			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
-			double miPmt = base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT);
+			double lowPI = Functions.round(low.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT));
+			double highPI = Functions.round(high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT));
+			double miPmt = Functions.round(base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT));
 			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || (oldMi!= 0 && miPmt==0)) {
 				if (pd != null)
 					pd.setEnd(i);

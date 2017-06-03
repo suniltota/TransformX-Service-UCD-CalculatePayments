@@ -24,7 +24,9 @@ import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
 import com.actualize.mortgage.domainmodels.AmortizingPayment;
 import com.actualize.mortgage.domainmodels.CalculationError;
 import com.actualize.mortgage.domainmodels.CalculationError.CalculationErrorType;
+import com.actualize.mortgage.domainmodels.CompositePayment;
 import com.actualize.mortgage.domainmodels.FixedInterestRate;
+import com.actualize.mortgage.domainmodels.InterestOnlyPayment;
 import com.actualize.mortgage.domainmodels.InterestRate;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
@@ -51,16 +53,18 @@ public class CalculatePayments {
 	}
 
 	public Document calculate(Document doc) throws NumberFormatException, XPathExpressionException {
-		// TODO ensure correct ordering of nodes (e.g. alphabetical)
 		Node root = doc.getDocumentElement();
 		xpath = createXPath(root);
 		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
 		
 		// Obtain calculation parameters
-		// TODO implement interest only and balloon mortgages
-		boolean balloonIndicator = "true".equals(getIntegerValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo), null)); // REQUIRED
-		boolean interestOnlyIndicator = "true".equals(getIntegerValue(root, addNamespace("//LOAN_DETAIL/InterestOnlyIndicator", mismo), null)); // REQUIRED
-		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
+		int ioTerm = 0;
+		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/InterestOnlyIndicator", mismo)))) // REQUIRED
+			ioTerm = getIntegerValue(root, addNamespace("//INTEREST_ONLY/InterestOnlyTermMonthsCount", mismo), null); // REQUIRED, if InterestOnlyIndicator = 'true'
+		int amortizationTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
+		int loanTerm = amortizationTerm;
+		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) // REQUIRED
+			loanTerm = 0; // REQUIRED, if BalloonIndicator = 'true'
 		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION/AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
 		InterestRate rate = null;
@@ -82,7 +86,13 @@ public class CalculatePayments {
 		double prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/PrepaidItemType='PrepaidInterest']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
 		
 		// Perform calculations
-		Payment payment = new AmortizingPayment(loanTerm);
+		Payment payment = null;
+		if (ioTerm == 0)
+			payment = new AmortizingPayment(amortizationTerm);
+		else if (ioTerm < loanTerm)
+			payment = new CompositePayment(ioTerm, new InterestOnlyPayment(1), amortizationTerm, new AmortizingPayment(amortizationTerm - ioTerm));
+		else
+			payment = new InterestOnlyPayment(amortizationTerm);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
 		double fullyIndexedRate = loan.interestRate.getInitialRate();
 		MortgageInsurance insurance = null; // TODO need to find datapoints to pass info (Heather question)
@@ -92,29 +102,23 @@ public class CalculatePayments {
 		// Insert max/min's
 		if ("AdjustableRate".equals(amortizationType)) {
 			Node rateLifetime = getNode(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE", mismo));
-			Node earliestEffectiveMonth = getNode(rateLifetime, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
-			if (earliestEffectiveMonth != null)
-				rateLifetime.removeChild(earliestEffectiveMonth);
-			rateLifetime.appendChild(doc.createElement(addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (projected.maxRateFirstMonth+1)));
+			if (rateLifetime == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' is missing"));
+			replace(doc, rateLifetime, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (projected.maxRateFirstMonth+1)));
 		}
-		if ("AdjustableRate".equals(amortizationType) || interestOnlyIndicator) {
+		if ("AdjustableRate".equals(amortizationType) || ioTerm > 0) {
 			Node piLifetime = getNode(root, addNamespace("//PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
-			Node maxAmount = getNode(piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo));
-			if (maxAmount != null)
-				piLifetime.removeChild(maxAmount);
-			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo))).appendChild(doc.createTextNode("" + (projected.maxPIFirstMonth+1)));
-			Node earliestEffectiveMonth = getNode(piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo));
-			if (earliestEffectiveMonth != null)
-				piLifetime.removeChild(earliestEffectiveMonth);
-			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (projected.maxPIFirstMonth+1)));
+			if (piLifetime == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing"));
+			replace(doc, piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo)).appendChild(doc.createTextNode("" + String.format("%9.2f", projected.maxPI).trim()));
+			replace(doc, piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (projected.maxPIFirstMonth+1)));
 		}
 		
 		// Insert projected payments
 		Node integratedDisclosure = getNode(root, addNamespace("//INTEGRATED_DISCLOSURE", mismo));
-		Node projectedPayments = getNode(integratedDisclosure, addNamespace("PROJECTED_PAYMENTS", mismo));
-		if (projectedPayments != null)
-			integratedDisclosure.removeChild(projectedPayments);
-		projectedPayments = integratedDisclosure.appendChild(doc.createElement(addNamespace("PROJECTED_PAYMENTS", mismo)));
+		if (integratedDisclosure == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'INTEGRATED_DISCLOSURE' is missing"));
+		Node projectedPayments = replace(doc, integratedDisclosure, addNamespace("PROJECTED_PAYMENTS", mismo));
 		for (int i = 0; i < projected.payments.length; i++) {
 			Element projectedPayment = (Element)projectedPayments.appendChild(doc.createElement(addNamespace("PROJECTED_PAYMENT", mismo)));
 			projectedPayment.setAttribute("SequenceNumber", ""+(i+1));
@@ -129,7 +133,7 @@ public class CalculatePayments {
 			projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentEstimatedTotalMaximumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", maxPI + mi + escrow).trim()));
 			if (maxPI != minPI)
 				projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentEstimatedTotalMinimumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", minPI + mi + escrow).trim()));
-			projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentMIPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", mi)));
+			projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentMIPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", mi).trim()));
 			projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentPrincipalAndInterestMaximumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", maxPI).trim()));
 			if (maxPI != minPI)
 				projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentPrincipalAndInterestMinimumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", minPI).trim()));
@@ -137,15 +141,14 @@ public class CalculatePayments {
 
 		// Insert calculations
 		Node feeInformation = getNode(root, addNamespace("//FEE_INFORMATION", mismo));
-		Node feesSummary = getNode(integratedDisclosure, addNamespace("FEES_SUMMARY", mismo));
-		if (feesSummary != null)
-			feeInformation.removeChild(feesSummary);
-		feesSummary = feeInformation.appendChild(doc.createElement(addNamespace("FEES_SUMMARY", mismo)));
+		if (feeInformation == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_INFORMATION' is missing"));
+		Node feesSummary = replace(doc, feeInformation, addNamespace("FEES_SUMMARY", mismo));
 		Node feesSummaryDetail = feesSummary.appendChild(doc.createElement(addNamespace("FEE_SUMMARY_DETAIL", mismo)));
-		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr*100).trim()));
+		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
-		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalInterestPercent", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalInterestPercentage*100).trim()));
+		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalInterestPercent", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalInterestPercentage).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalOfAllPaymentsAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalOfPayments).trim()));
 		
 		return doc;
@@ -156,7 +159,9 @@ public class CalculatePayments {
 	}
 	
 	private InterestRate createAdjustableInterestRate(Node root, String mismo) {
-		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, unless DisclosedFullyIndexedRatePercent is present
+		if (initialRate == 0)
+			initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
 		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null) - 1; // REQUIRED, if AmortizationType=AdjustableRate
 		int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
 		double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
@@ -167,7 +172,7 @@ public class CalculatePayments {
 	}
 	
 	private InterestRate createFixedInterestRate(Node root, String mismo) {
-		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null); // REQUIRED, if AmortizationType=Fixed
+		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=Fixed
 		return new FixedInterestRate(rate);
 	}
 	
@@ -178,6 +183,7 @@ public class CalculatePayments {
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "bad xpath expression '" + expression + "'"));
 			return 0;
 		}
+		
 	}
 	
 	private double getDoubleValue(Node node, String expression, Double dflt) {
@@ -225,6 +231,13 @@ public class CalculatePayments {
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "bad xpath expression '" + expression + "'"));
 			return null;
 		}
+	}
+	
+	private static Node findLocation(Node node, Node child) {
+		for (Node n = node.getFirstChild(); n != null; n = n.getNextSibling())
+			if (child.getNodeName().compareTo(n.getNodeName()) < 0)
+				return n;
+		return null;
 	}
 	
 	private static XPath createXPath(Node root) {
@@ -277,19 +290,14 @@ public class CalculatePayments {
 		}
 		return String.join("/", outer);
 	}
-/*
-	public static void main(String[] args) {
-		try {
-			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_2017208111.xml";
-//			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_6830011666.xml";
-			File file = new File(filename);
-			@SuppressWarnings("resource")
-			String content = new Scanner(file).useDelimiter("\\Z").next();
-			CalculatePayments calculator = new CalculatePayments();
-			calculator.calculate(content);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+	
+	private Node replace(Document doc, Node parent, String name) {
+		Node oldNode = getNode(parent, name);
+		Node newNode = doc.createElement(name);
+		if (oldNode == null)
+			parent.insertBefore(newNode, findLocation(parent, newNode));
+		else
+			parent.replaceChild(newNode, oldNode);
+		return newNode;
 	}
-*/
 }

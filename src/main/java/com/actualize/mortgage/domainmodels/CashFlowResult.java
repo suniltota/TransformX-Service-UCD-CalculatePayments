@@ -21,7 +21,7 @@ public class CashFlowResult {
 		double[] cf = new double[length + 1];
 		cf[0] = -getValue(0, CashFlowInfo.BALANCE) + upfrontCosts;
 		for (int i = 1; i < cf.length; i++)
-			cf[i] = getValue(0, CashFlowInfo.TOTAL_PAYMENT);
+			cf[i] = getValue(i-1, CashFlowInfo.TOTAL_PAYMENT);
 		return 12.0 * Functions.irr(cf);
 	}
 
@@ -51,7 +51,7 @@ public class CashFlowResult {
 	@SuppressWarnings("unchecked")
 	private void addBase(int month, CashFlowInfo info, double value) {
 		value += getValue(month, info);
-		((TreeMap<CashFlowInfo, Double>)data[month]).put(info, Functions.round(value));
+		((TreeMap<CashFlowInfo, Double>)data[month]).put(info, value);
 	}
 	
 }

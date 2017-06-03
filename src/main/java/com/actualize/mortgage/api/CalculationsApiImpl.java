@@ -1,6 +1,5 @@
 package com.actualize.mortgage.api;
 
-import java.io.ByteArrayOutputStream;
 import java.io.StringWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
