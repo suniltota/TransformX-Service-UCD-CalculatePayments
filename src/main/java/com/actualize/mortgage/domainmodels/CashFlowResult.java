@@ -45,7 +45,7 @@ public class CashFlowResult {
 			if (value != null)
 				accum += value;
 		}
-		return accum;
+		return Math.round(info[0].precision*accum)/info[0].precision;
 	}
 	
 	@SuppressWarnings("unchecked")

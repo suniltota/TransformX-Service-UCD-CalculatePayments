@@ -1,6 +1,9 @@
 package com.actualize.mortgage.ucd.calculatepayments;
 
 import java.io.StringReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.TreeMap;
@@ -31,6 +34,7 @@ import com.actualize.mortgage.domainmodels.InterestRate;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
 import com.actualize.mortgage.domainmodels.Payment;
+import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
 
 public class CalculatePayments {
 	private static final String MISMO_URL = "http://www.mismo.org/residential/2009/schemas";
@@ -95,7 +99,7 @@ public class CalculatePayments {
 			payment = new InterestOnlyPayment(amortizationTerm);
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
 		double fullyIndexedRate = loan.interestRate.getInitialRate();
-		MortgageInsurance insurance = null; // TODO need to find datapoints to pass info (Heather question)
+		MortgageInsurance insurance = createMortgageInsurance(root, mismo, loanAmount, loanTerm);
 		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
 		LoanCalculations calcs = new LoanCalculations(loan, insurance, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
 
@@ -174,6 +178,52 @@ public class CalculatePayments {
 	private InterestRate createFixedInterestRate(Node root, String mismo) {
 		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=Fixed
 		return new FixedInterestRate(rate);
+	}
+	
+	private MortgageInsurance createMortgageInsurance(Node root, String mismo, double loanAmount, int loanTerm) {
+		int miAmount = getIntegerValue(root, addNamespace("//PROJECTED_PAYMENT/ProjectedPaymentMIPaymentAmount", mismo), 0); // REQUIRED, if MI exists
+		if (miAmount == 0)
+			return null;
+		String miTerminationDate = getStringValue(root, addNamespace("//MI_DATA_DETAIL/MIScheduledTerminationDate", mismo)); // REQUIRED, if terminating MI at a scheduled date
+		String closingDate = getStringValue(root, addNamespace("//CLOSING_INFORMATION_DETAIL/ClosingDate", mismo)); // REQUIRED, if terminating MI at a scheduled date
+		if ("".equals(miTerminationDate) || "".equals(closingDate)) {
+			double homeValue = getDoubleValue(root, addNamespace("//SALES_CONTRACT_DETAIL/SalesContractAmount", mismo), 0.0);
+			if (homeValue == 0.0)
+				homeValue = getDoubleValue(root, addNamespace("//SALES_CONTRACT_DETAIL/RealPropertyAmount", mismo), 0.0);
+			if (homeValue == 0.0)
+				homeValue = getDoubleValue(root, addNamespace("//PROPERTY_DETAIL/PropertyEstimatedValueAmount", mismo), 0.0);
+			return new PrivateMortgageInsurance(homeValue, loanTerm, miAmount*12/loanAmount, 0, 0, 0, 0);
+		}
+		return new PrivateMortgageInsurance(calculateMIDuration(closingDate, miTerminationDate), loanTerm, miAmount*12/loanAmount, 0, 0, 0, 0);
+	}
+	
+	private int calculateMIDuration(String closingDate, String miTerminationDate) {
+		SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat yearFormatter = new SimpleDateFormat("yyyy");
+		SimpleDateFormat monthFormatter = new SimpleDateFormat("MM");
+		Date closingDt;
+		Date miTerminationDt = null;
+		int fromMonth;
+		int fromYear;
+		int toMonth;
+		int toYear;
+		try {
+			closingDt = dateFormatter.parse(closingDate);
+			fromMonth = Integer.parseInt(monthFormatter.format(closingDt));
+			fromYear = Integer.parseInt(yearFormatter.format(closingDt));
+		} catch (ParseException e) {
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "bad closing date '" + closingDate + "'"));
+			return 0;
+		}
+		try {
+			miTerminationDt = dateFormatter.parse(miTerminationDate);
+			toMonth = Integer.parseInt(monthFormatter.format(miTerminationDt));
+			toYear = Integer.parseInt(yearFormatter.format(miTerminationDt));
+		} catch (ParseException e) {
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "bad closing date '" + miTerminationDt + "'"));
+			return 0;
+		}
+		return 12*(toYear - fromYear) + toMonth - fromMonth;
 	}
 	
 	private double getSumValue(Node node, String expression) {
