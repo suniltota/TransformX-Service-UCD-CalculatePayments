@@ -65,12 +65,12 @@ public class CalculatePayments {
 		int ioTerm = 0;
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/InterestOnlyIndicator", mismo)))) // REQUIRED
 			ioTerm = getIntegerValue(root, addNamespace("//INTEREST_ONLY/InterestOnlyTermMonthsCount", mismo), null); // REQUIRED, if InterestOnlyIndicator = 'true'
-		int amortizationTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
-		int loanTerm = amortizationTerm;
+		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
+		int amortizationTerm = loanTerm;
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) // REQUIRED
-			loanTerm = 0; // REQUIRED, if BalloonIndicator = 'true'
+			amortizationTerm = getIntegerValue(root, addNamespace("//AMORTIZATION_RULE/LoanAmortizationPeriodCount", mismo), null); // REQUIRED, if BalloonIndicator = 'true'
 		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
-		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION/AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
+		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
 		InterestRate rate = null;
 		switch (amortizationType) {
 			case "Fixed":

@@ -8,7 +8,6 @@ import com.actualize.mortgage.domainmodels.DisclosureModel;
 import com.actualize.mortgage.domainmodels.Environment;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
-import com.actualize.mortgage.ucd.calculationutils.Functions;
 /**
  * 
  * @author tim
