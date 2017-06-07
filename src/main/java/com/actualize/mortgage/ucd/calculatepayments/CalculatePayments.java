@@ -67,8 +67,19 @@ public class CalculatePayments {
 			ioTerm = getIntegerValue(root, addNamespace("//INTEREST_ONLY/InterestOnlyTermMonthsCount", mismo), null); // REQUIRED, if InterestOnlyIndicator = 'true'
 		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
 		int amortizationTerm = loanTerm;
-		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) // REQUIRED
+		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) { // REQUIRED
 			amortizationTerm = getIntegerValue(root, addNamespace("//AMORTIZATION_RULE/LoanAmortizationPeriodCount", mismo), null); // REQUIRED, if BalloonIndicator = 'true'
+			String amortizationPeriodType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/LoanAmortizationPeriodType", mismo));
+			switch (getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo))) {
+			case "Month":
+				break;
+			case "Year":
+				amortizationTerm *= 12;
+				break;
+			default:
+				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization period type '" + amortizationPeriodType + "' not supported"));
+			}
+		}
 		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
 		InterestRate rate = null;
