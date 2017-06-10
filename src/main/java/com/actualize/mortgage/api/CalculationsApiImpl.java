@@ -28,7 +28,7 @@ public class CalculationsApiImpl {
 	
 	private static final Logger LOGGER = Logger.getLogger(CalculationsApiImpl.class.getName());
    
-	@RequestMapping(value = "/calculatepayments", method = { RequestMethod.POST })
+	@RequestMapping(value = "/", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
 		LOGGER.log(Level.INFO, "Service call: /calculatepayments");
 		CalculatePayments calculator = new CalculatePayments();
@@ -44,5 +44,11 @@ public class CalculationsApiImpl {
         
         return result.getWriter().toString();
 	}
+	
+	@RequestMapping(value = "/ping", method = { RequestMethod.GET })
+    public String checkStatus() throws Exception {
+        return "The service for generating calculations is running and ready to accept your requests";
+    }
+
 
 }
