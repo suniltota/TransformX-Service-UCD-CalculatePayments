@@ -114,6 +114,21 @@ public class CalculatePayments {
 		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
 		LoanCalculations calcs = new LoanCalculations(loan, insurance, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
 
+		// Insert monthly payment
+		Node paymentRule = getNode(root, addNamespace("//PAYMENT_RULE", mismo));
+		if (paymentRule == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'InitialPrincipalAndInterestPaymentAmount' is missing"));
+		else {
+			paymentRule = replace(doc, paymentRule, addNamespace("PAYMENT_RULE", mismo));
+			double pmt = 0;
+			if (projected.payments.length > 0)
+				projected.payments[0].getHighPI();
+			paymentRule.appendChild(doc.createElement(addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
+			paymentRule.appendChild(doc.createElement(addNamespace("PartialPaymentAllowedIndicator", mismo))).appendChild(doc.createTextNode("false"));
+			paymentRule.appendChild(doc.createElement(addNamespace("PaymentFrequencyType", mismo))).appendChild(doc.createTextNode("Monthly"));
+			paymentRule.appendChild(doc.createElement(addNamespace("PaymentOptionIndicator", mismo))).appendChild(doc.createTextNode("false"));
+		}
+		
 		// Insert max/min's
 		if ("AdjustableRate".equals(amortizationType)) {
 			Node rateLifetime = getNode(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE", mismo));
