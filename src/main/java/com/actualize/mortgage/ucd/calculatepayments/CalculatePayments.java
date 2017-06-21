@@ -1,7 +1,5 @@
 package com.actualize.mortgage.ucd.calculatepayments;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -9,7 +7,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
-import java.util.Scanner;
 import java.util.TreeMap;
 
 import javax.xml.namespace.NamespaceContext;
@@ -424,20 +421,4 @@ public class CalculatePayments {
 		}
 		return String.join("/", outer);
 	}
-	
-	public static void main(String[] args) {
-		try {
-			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/TransformX/ucd-sample-xml-files-appendix-g/NonSeller_ARM_033117.xml";
-//			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_2017208111.xml";
-//			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_6830011666.xml";
-			File file = new File(filename);
-			@SuppressWarnings("resource")
-			String content = new Scanner(file).useDelimiter("\\Z").next();
-			CalculatePayments calculator = new CalculatePayments();
-			calculator.calculate(content);		
-		} catch (FileNotFoundException e) {		
-			e.printStackTrace();		
-		}		
-  	}
-	
 }
