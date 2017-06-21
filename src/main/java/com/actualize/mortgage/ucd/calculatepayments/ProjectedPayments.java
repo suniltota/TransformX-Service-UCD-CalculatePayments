@@ -16,9 +16,7 @@ import com.actualize.mortgage.domainmodels.MortgageInsurance;
 public class ProjectedPayments {
 	
 	public final DisclosureModel[] payments;
-	public final int maxRateFirstMonth;
-	public final int maxPIFirstMonth;
-	public final double maxPI;
+
 	/**
 	 * parameterized constructor to evaluate projected payments 
 	 * @param baseEnv
@@ -28,35 +26,13 @@ public class ProjectedPayments {
 	 * @param mi
 	 */
 	public ProjectedPayments(Loan loan, MortgageInsurance mi) {
-		// TODO start: pull this code out into a separate calculation class
-		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
-		CashFlowResult high = loan.generateCashFlows(highEnv);
-		int maxRateFirstMonth = 0;
-		double maxRate = -1;
-		int maxPIFirstMonth = 0;
-		double maxPI = -1;
-		for (int i = 0; i < high.length-1; i++) {
-			double highPI = high.getValue(i, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
-			if (highPI > maxPI) {
-				maxPIFirstMonth = i;
-				maxPI = highPI;
-			}
-			double highRate = high.getValue(i, CashFlowInfo.INTEREST_RATE);
-			if (highRate > maxRate) {
-				maxRateFirstMonth = i;
-				maxRate = highRate;
-			}
-		}
-		this.maxRateFirstMonth = maxRateFirstMonth;
-		this.maxPIFirstMonth = maxPIFirstMonth;
-		this.maxPI = maxPI;
-		// TODO end:
 		LinkedList<DisclosureModel> disclosureModels = generateAllDistinctPayments(loan, mi);
 		disclosureModels = combineSameStartYear(disclosureModels);
 		disclosureModels = consolidateThirdPayment(disclosureModels);
 		disclosureModels = fixEndYears(disclosureModels);
 		this.payments = disclosureModels.toArray(new DisclosureModel[disclosureModels.size()]);
 	}
+	
 	/**
 	 * 
 	 * @param baseEnv

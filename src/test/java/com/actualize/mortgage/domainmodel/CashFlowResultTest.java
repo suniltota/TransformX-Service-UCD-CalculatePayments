@@ -1,4 +1,4 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodel;
 
 import static org.junit.Assert.*;
 
@@ -13,7 +13,7 @@ import com.actualize.mortgage.domainmodels.InterestRate;
 import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.Payment;
 
-public class CashFlowTest {
+public class CashFlowResultTest {
 
 	@Test
 	public void test() {

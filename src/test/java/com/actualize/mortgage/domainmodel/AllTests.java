@@ -1,11 +1,11 @@
-package com.actualize.mortgage.mortgagemodel;
+package com.actualize.mortgage.domainmodel;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 @RunWith(Suite.class)
-@SuiteClasses({ CashFlowTest.class })
+@SuiteClasses({ CashFlowResultTest.class })
 public class AllTests {
 
 }

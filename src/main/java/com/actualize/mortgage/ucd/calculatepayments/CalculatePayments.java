@@ -1,11 +1,15 @@
 package com.actualize.mortgage.ucd.calculatepayments;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.StringReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Scanner;
 import java.util.TreeMap;
 
 import javax.xml.namespace.NamespaceContext;
@@ -82,17 +86,6 @@ public class CalculatePayments {
 		}
 		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
-		InterestRate rate = null;
-		switch (amortizationType) {
-			case "Fixed":
-				rate = createFixedInterestRate(root, mismo);
-				break;
-			case "AdjustableRate":
-				rate = createAdjustableInterestRate(root, mismo);
-				break;
-			default:
-				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization type '" + amortizationType + "' not supported"));
-		}
 		double escrow = getSumValue(root, addNamespace("//ESCROW_ITEM_DETAIL/EscrowMonthlyPaymentAmount", mismo));
 		double loanCostsTotal = getDoubleValue(root, addNamespace("//INTEGRATED_DISCLOSURE_SECTION_SUMMARY_DETAIL[IntegratedDisclosureSectionType='TotalLoanCosts'][IntegratedDisclosureSubsectionType='LoanCostsSubtotal']/IntegratedDisclosureSectionTotalAmount", mismo), null);
 		double aprIncludedCostsTotal = getSumValue(root, addNamespace("//ESCROW_ITEM[ESCROW_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/ESCROW_ITEM_PAYMENTS/ESCROW_ITEM_PAYMENT[EscrowItemPaymentPaidByType='Buyer']/EscrowItemActualPaymentAmount", mismo))
@@ -100,7 +93,7 @@ public class CalculatePayments {
 			+ getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
 		double prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/PrepaidItemType='PrepaidInterest']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
 		
-		// Perform calculations
+		// Create payment model
 		Payment payment = null;
 		if (ioTerm == 0)
 			payment = new AmortizingPayment(amortizationTerm);
@@ -108,47 +101,67 @@ public class CalculatePayments {
 			payment = new CompositePayment(ioTerm, new InterestOnlyPayment(1), amortizationTerm, new AmortizingPayment(amortizationTerm - ioTerm));
 		else
 			payment = new InterestOnlyPayment(amortizationTerm);
-		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
-		double fullyIndexedRate = loan.interestRate.getInitialRate();
-		MortgageInsurance insurance = createMortgageInsurance(root, mismo, loanAmount, loanTerm);
-		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
-		LoanCalculations calcs = new LoanCalculations(loan, insurance, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
+		
+		// Create interest rate model
+		InterestRate rate = null;
+		switch (amortizationType) {
+			case "Fixed":
+				rate = createFixedInterestRateModel(root, mismo);
+				break;
+			case "AdjustableRate":
+				rate = createAdjustableInterestRateModel(root, mismo);
+				break;
+			default:
+				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization type '" + amortizationType + "' not supported"));
+		}
 
-		// Insert monthly payment
-		Node paymentRule = getNode(root, addNamespace("//PAYMENT_RULE", mismo));
-		if (paymentRule == null)
-			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'InitialPrincipalAndInterestPaymentAmount' is missing"));
+		// Create MI model
+		MortgageInsurance insurance = createMortgageInsurance(root, mismo, loanAmount, loanTerm);
+		
+		// Create loan
+		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
+
+		// Run calculations
+		double fullyIndexedRate = loan.interestRate.getInitialRate();
+		LoanCalculations calcs = new LoanCalculations(loan, insurance, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
+		PaymentChanges changes = new PaymentChanges(loan);
+		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
+
+		// Insert InitialPrincipalAndInterestPaymentAmount data point (other data points in PAYMENT_RULE are not calculations)
+		Node paymentAmount = constructNodePath(root, addNamespace("//LOAN/PAYMENT/PAYMENT_RULE/InitialPrincipalAndInterestPaymentAmount", mismo));
+		if (paymentAmount == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'InitialPrincipalAndInterestPaymentAmount' can't be inserted"));
 		else {
-			paymentRule = replace(doc, paymentRule, addNamespace("PAYMENT_RULE", mismo));
 			double pmt = 0;
 			if (projected.payments.length > 0)
-				projected.payments[0].getHighPI();
-			paymentRule.appendChild(doc.createElement(addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
-			paymentRule.appendChild(doc.createElement(addNamespace("PartialPaymentAllowedIndicator", mismo))).appendChild(doc.createTextNode("false"));
-			paymentRule.appendChild(doc.createElement(addNamespace("PaymentFrequencyType", mismo))).appendChild(doc.createTextNode("Monthly"));
-			paymentRule.appendChild(doc.createElement(addNamespace("PaymentOptionIndicator", mismo))).appendChild(doc.createTextNode("false"));
+				pmt = projected.payments[0].getHighPI();
+			replaceNode(doc, paymentAmount.getParentNode(), addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
 		}
 		
-		// Insert max/min's
+		// Insert CeilingRatePercentEarliestEffectiveMonthsCount data point (other data points must be present to model AdjustableRate)
 		if ("AdjustableRate".equals(amortizationType)) {
-			Node rateLifetime = getNode(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE", mismo));
-			if (rateLifetime == null)
-				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' is missing"));
-			replace(doc, rateLifetime, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (projected.maxRateFirstMonth+1)));
-		}
-		if ("AdjustableRate".equals(amortizationType) || ioTerm > 0) {
-			Node piLifetime = getNode(root, addNamespace("//PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
-			if (piLifetime == null)
-				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing"));
-			replace(doc, piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo)).appendChild(doc.createTextNode("" + String.format("%9.2f", projected.maxPI).trim()));
-			replace(doc, piLifetime, addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (projected.maxPIFirstMonth+1)));
+			Node earliestCeilingRate = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
+			if (earliestCeilingRate == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'CeilingRatePercentEarliestEffectiveMonthsCount' can't be inserted"));
+			replaceNode(doc, earliestCeilingRate.getParentNode(), addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
 		}
 		
-		// Insert projected payments
+		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container
+		if ("AdjustableRate".equals(amortizationType) || ioTerm > 0) {
+			Node piLifetime = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
+			if (piLifetime == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing and can't be inserted"));
+			piLifetime = replaceNode(doc, piLifetime.getParentNode(), addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
+			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.firstChangeMonth+2)));
+			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", changes.maxPI).trim()));
+			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+1)));
+		}
+		
+		// Insert entire PROJECTED_PAYMENTS container
 		Node integratedDisclosure = getNode(root, addNamespace("//INTEGRATED_DISCLOSURE", mismo));
 		if (integratedDisclosure == null)
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'INTEGRATED_DISCLOSURE' is missing"));
-		Node projectedPayments = replace(doc, integratedDisclosure, addNamespace("PROJECTED_PAYMENTS", mismo));
+		Node projectedPayments = replaceNode(doc, integratedDisclosure, addNamespace("PROJECTED_PAYMENTS", mismo));
 		for (int i = 0; i < projected.payments.length; i++) {
 			Element projectedPayment = (Element)projectedPayments.appendChild(doc.createElement(addNamespace("PROJECTED_PAYMENT", mismo)));
 			projectedPayment.setAttribute("SequenceNumber", ""+(i+1));
@@ -169,12 +182,11 @@ public class CalculatePayments {
 				projectedPayment.appendChild(doc.createElement(addNamespace("ProjectedPaymentPrincipalAndInterestMinimumPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", minPI).trim()));
 		}
 
-		// Insert calculations
-		Node feeInformation = getNode(root, addNamespace("//FEE_INFORMATION", mismo));
-		if (feeInformation == null)
-			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_INFORMATION' is missing"));
-		Node feesSummary = replace(doc, feeInformation, addNamespace("FEES_SUMMARY", mismo));
-		Node feesSummaryDetail = feesSummary.appendChild(doc.createElement(addNamespace("FEE_SUMMARY_DETAIL", mismo)));
+		// Insert entire FEE_SUMMARY_DETAIL container
+		Node feesSummaryDetail = constructNodePath(root, addNamespace("//FEE_INFORMATION/FEE_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
+		if (feesSummaryDetail == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY_DETAIL' is missing and can't be added"));
+		feesSummaryDetail = replaceNode(doc, feesSummaryDetail.getParentNode(), addNamespace("FEES_SUMMARY", mismo));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
@@ -188,7 +200,7 @@ public class CalculatePayments {
 		return errors.toArray(new CalculationError[errors.size()]);
 	}
 	
-	private InterestRate createAdjustableInterestRate(Node root, String mismo) {
+	private InterestRate createAdjustableInterestRateModel(Node root, String mismo) {
 		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, unless DisclosedFullyIndexedRatePercent is present
 		if (initialRate == 0)
 			initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
@@ -201,7 +213,7 @@ public class CalculatePayments {
 		return new AdjustableInterestRate(initialRate, firstResetTerm, subsequentResetTerm, firstResetCap, subsequentResetCap, lifetimeCap, firstResetCap, subsequentResetCap, lifetimeFloor); // REQUIRED, if AmortizationType=AdjustableRate
 	}
 	
-	private InterestRate createFixedInterestRate(Node root, String mismo) {
+	private InterestRate createFixedInterestRateModel(Node root, String mismo) {
 		double rate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=Fixed
 		return new FixedInterestRate(rate);
 	}
@@ -309,11 +321,57 @@ public class CalculatePayments {
 		}
 	}
 	
-	private static Node findLocation(Node node, Node child) {
+	private Node constructNodePath(Node node, String nodePathToAdd) {
+		String nodeName = "";
+		String[] nodes = nodePathToAdd.split("/");
+		for (int i = 0; i < nodes.length; i++)
+			if ("".equals(nodes[i]))
+				nodeName += "/";
+			else {
+				nodeName += nodes[i];
+				Node n = getNode(node, nodeName);
+				if (n == null)
+					errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container " + nodeName + " is missing and can't be inserted"));
+				else
+					return traverseContainerPath(n, Arrays.copyOfRange(nodes, i+1, nodes.length));
+				break;
+			}
+		return null;
+	}
+	
+	private Node traverseContainerPath(Node node, String[] nodesToAdd) {
+		for (int i = 0; i < nodesToAdd.length; i++) {
+			Node n = getNode(node, nodesToAdd[i]);
+			if (n == null)
+				return insertContainerPath(node, Arrays.copyOfRange(nodesToAdd, i, nodesToAdd.length));
+			node = n;
+		}
+		return node;
+	}
+	
+	private Node replaceNode(Document doc, Node parent, String name) {
+		Node oldNode = getNode(parent, name);
+		Node newNode = doc.createElement(name);
+		if (oldNode == null)
+			return parent.insertBefore(newNode, findLocation(parent, name));
+		parent.replaceChild(newNode, oldNode);
+		return newNode;
+	}
+	
+	private static Node findLocation(Node node, String child) {
 		for (Node n = node.getFirstChild(); n != null; n = n.getNextSibling())
-			if (child.getNodeName().compareTo(n.getNodeName()) < 0)
+			if (child.compareTo(n.getNodeName()) < 0)
 				return n;
 		return null;
+	}
+	
+	static private Node insertContainerPath(Node node, String[] nodesToAdd) {
+		Document doc = node.getOwnerDocument();
+		Node newNode = doc.createElement(nodesToAdd[0]);
+		node = node.insertBefore(newNode, findLocation(node, nodesToAdd[0]));
+		for (int i = 1; i < nodesToAdd.length; i++)
+			node = node.appendChild(newNode);
+		return node;
 	}
 	
 	private static XPath createXPath(Node root) {
@@ -367,13 +425,19 @@ public class CalculatePayments {
 		return String.join("/", outer);
 	}
 	
-	private Node replace(Document doc, Node parent, String name) {
-		Node oldNode = getNode(parent, name);
-		Node newNode = doc.createElement(name);
-		if (oldNode == null)
-			parent.insertBefore(newNode, findLocation(parent, newNode));
-		else
-			parent.replaceChild(newNode, oldNode);
-		return newNode;
-	}
+	public static void main(String[] args) {
+		try {
+			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/TransformX/ucd-sample-xml-files-appendix-g/NonSeller_ARM_033117.xml";
+//			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_2017208111.xml";
+//			String filename = "C:/Users/tmcuckie/Dropbox (Personal)/USBank Code/Code_2016_11_03/Actualize/Data/CD_6830011666.xml";
+			File file = new File(filename);
+			@SuppressWarnings("resource")
+			String content = new Scanner(file).useDelimiter("\\Z").next();
+			CalculatePayments calculator = new CalculatePayments();
+			calculator.calculate(content);		
+		} catch (FileNotFoundException e) {		
+			e.printStackTrace();		
+		}		
+  	}
+	
 }
