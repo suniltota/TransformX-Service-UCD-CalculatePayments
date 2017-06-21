@@ -1,14 +1,18 @@
 package com.actualize.mortgage.ucd.calculatepayments;
 
 import java.io.StringReader;
+import java.io.StringWriter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.TreeMap;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
 import javax.xml.namespace.NamespaceContext;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -27,8 +31,9 @@ import org.xml.sax.InputSource;
 import com.actualize.mortgage.domainmodels.AdjustableInterestRate;
 import com.actualize.mortgage.domainmodels.AmortizingPayment;
 import com.actualize.mortgage.domainmodels.CalculationError;
-import com.actualize.mortgage.domainmodels.CalculationError.CalculationErrorType;
 import com.actualize.mortgage.domainmodels.CompositePayment;
+import com.actualize.mortgage.domainmodels.ErrorModel;
+import com.actualize.mortgage.domainmodels.ErrorsListModel;
 import com.actualize.mortgage.domainmodels.FixedInterestRate;
 import com.actualize.mortgage.domainmodels.InterestOnlyPayment;
 import com.actualize.mortgage.domainmodels.InterestRate;
@@ -36,13 +41,14 @@ import com.actualize.mortgage.domainmodels.Loan;
 import com.actualize.mortgage.domainmodels.MortgageInsurance;
 import com.actualize.mortgage.domainmodels.Payment;
 import com.actualize.mortgage.domainmodels.PrivateMortgageInsurance;
+import com.actualize.mortgage.ucd.calculationutils.CalculationErrorType;
 
 public class CalculatePayments {
 	private static final String MISMO_URL = "http://www.mismo.org/residential/2009/schemas";
 	private XPath xpath = null;
 	private LinkedList<CalculationError> errors = new LinkedList<CalculationError>();
 
-	public Document calculate(String xmldoc) {
+	public Document calculate(String xmldoc)  throws Exception{
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         DocumentBuilder builder;  
@@ -52,9 +58,29 @@ public class CalculatePayments {
             Document doc = builder.parse(new InputSource(new StringReader(xmldoc)));
             return calculate(doc);
         } catch (Exception e) {  
-            // TODO dump errors
+        	ErrorsListModel errorsList = new ErrorsListModel();
+        	List<ErrorModel> errorList = new LinkedList();
+        	errors.forEach(errorEntity-> {
+        		ErrorModel errorModel = new ErrorModel();
+        		errorModel.setType(errorEntity.getType().msg);
+        		errorModel.setMessage(errorEntity.getInfo());
+        		errorList.add(errorModel);
+        	});
+        	errorsList.setError(errorList);
+        	StringWriter sw = new StringWriter();
+        	JAXBContext jaxbContext = JAXBContext.newInstance(ErrorsListModel.class);
+        	Marshaller jaxbMarshaller = jaxbContext.createMarshaller();
+        		jaxbMarshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
+        	jaxbMarshaller.marshal(errorsList, sw);
+        	String xmlString = sw.toString();
+        	
+        	DocumentBuilder db = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        	InputSource is = new InputSource();
+        	is.setCharacterStream(new StringReader(xmlString));
+
+        	Document doc = db.parse(is);
+        	return doc;
         }
-        return null;
 	}
 
 	public Document calculate(Document doc) throws NumberFormatException, XPathExpressionException {

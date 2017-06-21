@@ -27,7 +27,13 @@ import com.actualize.mortgage.ucd.calculatepayments.CalculatePayments;
 public class CalculationsApiImpl {
 	
 	private static final Logger LOGGER = Logger.getLogger(CalculationsApiImpl.class.getName());
-   
+	
+   /**
+    * this api return the mismo xml with calculated projected payments details
+    * @param xmldoc
+    * @return xml Returns XML with projected payments calculated values
+    * @throws Exception
+    */
 	@RequestMapping(value = "/", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
 		LOGGER.log(Level.INFO, "Service call: /calculatepayments");
@@ -45,6 +51,11 @@ public class CalculationsApiImpl {
         return result.getWriter().toString();
 	}
 	
+	/**
+	 * check the status of the service
+	 * @return String 
+	 * @throws Exception
+	 */
 	@RequestMapping(value = "/ping", method = { RequestMethod.GET })
     public String checkStatus() throws Exception {
         return "The service for generating calculations is running and ready to accept your requests";

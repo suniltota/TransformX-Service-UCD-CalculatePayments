@@ -1,24 +1,30 @@
 package com.actualize.mortgage.domainmodels;
 
+import com.actualize.mortgage.ucd.calculationutils.CalculationErrorType;
+
 public class CalculationError {
-	public enum CalculationErrorType {
-		INTERNAL_ERROR("internal error"),
-		MISSING_DATA("calculation is missing required input data"),
-		NOT_IMPLEMENTED("calculation not implemented"),
-		OTHER("other calculation error");
-		
-		public final String msg;
-		
-		private CalculationErrorType(String msg) {
-			this.msg = msg;
-		}
-	}
-	
-	public final CalculationErrorType type;
-	public final String info;
+
+	private final CalculationErrorType type;
+	private final String info;
 	
 	public CalculationError(CalculationErrorType type, String info) {
 		this.type = type;
 		this.info = info;
 	}
+
+	/**
+	 * @return the type
+	 */
+	public CalculationErrorType getType() {
+		return type;
+	}
+
+	/**
+	 * @return the info
+	 */
+	public String getInfo() {
+		return info;
+	}
+
+	
 }
