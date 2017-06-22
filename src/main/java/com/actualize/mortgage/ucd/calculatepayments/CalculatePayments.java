@@ -206,10 +206,10 @@ public class CalculatePayments {
 		}
 
 		// Insert entire FEE_SUMMARY_DETAIL container
-		Node feesSummaryDetail = constructNodePath(root, addNamespace("//FEE_INFORMATION/FEE_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
+		Node feesSummaryDetail = constructNodePath(root, addNamespace("//FEE_INFORMATION/FEES_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
 		if (feesSummaryDetail == null)
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY_DETAIL' is missing and can't be added"));
-		feesSummaryDetail = replaceNode(doc, feesSummaryDetail.getParentNode(), addNamespace("FEES_SUMMARY", mismo));
+		feesSummaryDetail = replaceNode(doc, feesSummaryDetail.getParentNode(), addNamespace("FEE_SUMMARY_DETAIL", mismo));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
@@ -393,7 +393,7 @@ public class CalculatePayments {
 		Node newNode = doc.createElement(nodesToAdd[0]);
 		node = node.insertBefore(newNode, findLocation(node, nodesToAdd[0]));
 		for (int i = 1; i < nodesToAdd.length; i++)
-			node = node.appendChild(newNode);
+			node = node.appendChild(doc.createElement(nodesToAdd[i]));
 		return node;
 	}
 	
