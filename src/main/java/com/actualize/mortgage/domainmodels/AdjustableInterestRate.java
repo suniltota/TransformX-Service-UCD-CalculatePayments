@@ -5,15 +5,15 @@ package com.actualize.mortgage.domainmodels;
  *
  */
 public class AdjustableInterestRate extends InterestRate {
-	private double initialRate;
-	private int firstReset;
-	private int subsequentReset;
-	private double firstCap;
-	private double subsequentCap;
-	private double lifetimeCap;
-	private double firstFloor;
-	private double subsequentFloor;
-	private double lifetimeFloor;
+	public final double initialRate;
+	public final int firstReset;
+	public final int subsequentReset;
+	public final double firstCap;
+	public final double subsequentCap;
+	public final double lifetimeCap;
+	public final double firstFloor;
+	public final double subsequentFloor;
+	public final double lifetimeFloor;
 	
 	public AdjustableInterestRate(double initialRate, int firstReset, int subsequentReset,
 			double firstCap, double subsequentCap, double lifetimeCap,
