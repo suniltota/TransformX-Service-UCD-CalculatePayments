@@ -48,7 +48,7 @@ public class CalculatePayments {
 	private XPath xpath = null;
 	private LinkedList<CalculationError> errors = new LinkedList<CalculationError>();
 
-	public Document calculate(String xmldoc)  throws Exception{
+	public Document calculate(String xmldoc) throws Exception{
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         DocumentBuilder builder;  
@@ -59,7 +59,7 @@ public class CalculatePayments {
             return calculate(doc);
         } catch (Exception e) {  
         	ErrorsListModel errorsList = new ErrorsListModel();
-        	List<ErrorModel> errorList = new LinkedList();
+        	List<ErrorModel> errorList = new LinkedList<ErrorModel>();
         	errors.forEach(errorEntity-> {
         		ErrorModel errorModel = new ErrorModel();
         		errorModel.setType(errorEntity.getType().msg);
@@ -110,7 +110,7 @@ public class CalculatePayments {
 		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
 		double escrow = getSumValue(root, addNamespace("//ESCROW_ITEM_DETAIL/EscrowMonthlyPaymentAmount", mismo));
-		double loanCostsTotal = getDoubleValue(root, addNamespace("//INTEGRATED_DISCLOSURE_SECTION_SUMMARY_DETAIL[IntegratedDisclosureSectionType='TotalLoanCosts'][IntegratedDisclosureSubsectionType='LoanCostsSubtotal']/IntegratedDisclosureSectionTotalAmount", mismo), null);
+		double loanCostsTotal = getSumValue(root, addNamespace("//INTEGRATED_DISCLOSURE_SECTION_SUMMARY_DETAIL[IntegratedDisclosureSectionType='TotalLoanCosts'][IntegratedDisclosureSubsectionType='LoanCostsSubtotal']/IntegratedDisclosureSectionTotalAmount", mismo));
 		double aprIncludedCostsTotal = getSumValue(root, addNamespace("//ESCROW_ITEM[ESCROW_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/ESCROW_ITEM_PAYMENTS/ESCROW_ITEM_PAYMENT[EscrowItemPaymentPaidByType='Buyer']/EscrowItemActualPaymentAmount", mismo))
 			+ getSumValue(root, addNamespace("//FEE[FEE_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/FEE_PAYMENTS/FEE_PAYMENT[FeePaymentPaidByType='Buyer']/FeeActualPaymentAmount", mismo))
 			+ getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
