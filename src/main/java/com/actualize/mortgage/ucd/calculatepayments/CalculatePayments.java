@@ -97,7 +97,7 @@ public class CalculatePayments {
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) { // REQUIRED
 			amortizationTerm = getIntegerValue(root, addNamespace("//AMORTIZATION_RULE/LoanAmortizationPeriodCount", mismo), null); // REQUIRED, if BalloonIndicator = 'true'
 			String amortizationPeriodType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/LoanAmortizationPeriodType", mismo));
-			switch (getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo))) {
+			switch (amortizationPeriodType) {
 			case "Month":
 				break;
 			case "Year":
