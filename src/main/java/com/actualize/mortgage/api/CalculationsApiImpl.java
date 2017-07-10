@@ -1,7 +1,6 @@
 package com.actualize.mortgage.api;
 
 import java.io.StringWriter;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.xml.transform.OutputKeys;
@@ -18,8 +17,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.w3c.dom.Document;
 
 import com.actualize.mortgage.ucd.calculatepayments.CalculatePayments;
+
 /**
- * this class defines the apis for getting the calulations for Project payments and loan terms
+ * this class defines the apis for getting the calculations for Project payments and loan terms
  * @author sboragala
  *
  */

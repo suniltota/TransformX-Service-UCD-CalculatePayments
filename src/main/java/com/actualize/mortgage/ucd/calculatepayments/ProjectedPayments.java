@@ -16,6 +16,9 @@ import com.actualize.mortgage.domainmodels.MortgageInsurance;
 public class ProjectedPayments {
 	
 	public final DisclosureModel[] payments;
+	public final CashFlowResult low;
+	public final CashFlowResult high;
+	public final CashFlowResult base;
 
 	/**
 	 * parameterized constructor to evaluate projected payments 
@@ -26,6 +29,15 @@ public class ProjectedPayments {
 	 * @param mi
 	 */
 	public ProjectedPayments(Loan loan, MortgageInsurance mi) {
+		Environment baseEnv = new Environment(loan.interestRate.getInitialRate());
+		Environment lowEnv = new Environment(loan.interestRate.getMinRate());
+		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
+		base = loan.generateCashFlows(baseEnv);
+		if (mi != null)
+			mi.addMortgageInsurance(base);
+		low = loan.generateCashFlows(lowEnv);
+		high = loan.generateCashFlows(highEnv);
+
 		LinkedList<DisclosureModel> disclosureModels = generateAllDistinctPayments(loan, mi);
 		disclosureModels = combineSameStartYear(disclosureModels);
 		disclosureModels = consolidateThirdPayment(disclosureModels);
@@ -43,14 +55,8 @@ public class ProjectedPayments {
 	 * @return
 	 */
 	private LinkedList<DisclosureModel> generateAllDistinctPayments(Loan loan, MortgageInsurance mi) {
-		Environment baseEnv = new Environment(loan.interestRate.getInitialRate());
-		Environment lowEnv = new Environment(loan.interestRate.getMinRate());
-		Environment highEnv = new Environment(loan.interestRate.getMaxRate()); 
-		CashFlowResult base = loan.generateCashFlows(baseEnv);
 		if (mi != null)
 			mi.addMortgageInsurance(base);
-		CashFlowResult low = loan.generateCashFlows(lowEnv);
-		CashFlowResult high = loan.generateCashFlows(highEnv);
 		double oldMi = 0;
 		int periods = base.length;
 		DisclosureModel pd = null;

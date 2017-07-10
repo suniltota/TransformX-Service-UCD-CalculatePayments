@@ -11,12 +11,12 @@ public class PaymentChanges {
 	public final int maxRateFirstMonth;
 	public final double maxRate;
 	public final int firstChangeMonth;
-	public final double firstChangeMaxPI;
-	public final double firstChangeMinPI;
+//	public final double firstChangeMaxPI;
+//	public final double firstChangeMinPI;
 
 	public PaymentChanges(Loan loan) {
 		CashFlowResult high = loan.generateCashFlows(new Environment(loan.interestRate.getMaxRate()));
-		CashFlowResult low = loan.generateCashFlows(new Environment(loan.interestRate.getMinRate()));
+//		CashFlowResult low = loan.generateCashFlows(new Environment(loan.interestRate.getMinRate()));
 
 		int maxPIFirstMonth = 0;
 		double maxPI = -1;
@@ -46,7 +46,7 @@ public class PaymentChanges {
 		this.maxPIFirstMonth = maxPIFirstMonth;
 		this.maxPI = maxPI;
 		this.firstChangeMonth = firstChangeMonth;
-		this.firstChangeMaxPI = high.getValue(firstChangeMonth, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
-		this.firstChangeMinPI = low.getValue(firstChangeMonth, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+//		this.firstChangeMaxPI = high.getValue(firstChangeMonth, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+//		this.firstChangeMinPI = low.getValue(firstChangeMonth, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 	}
 }
