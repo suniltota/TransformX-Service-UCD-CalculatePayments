@@ -159,7 +159,7 @@ public class CalculatePayments {
 			double pmt = 0;
 			if (projected.payments.length > 0)
 				pmt = projected.payments[0].getHighPI();
-			replaceNode(doc, paymentAmount.getParentNode(), addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
+			paymentAmount.appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
 		}
 		
 		// Insert CeilingRatePercentEarliestEffectiveMonthsCount data point (other data points must be present to model AdjustableRate)
@@ -167,7 +167,7 @@ public class CalculatePayments {
 			Node earliestCeilingRate = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
 			if (earliestCeilingRate == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'CeilingRatePercentEarliestEffectiveMonthsCount' can't be inserted"));
-			replaceNode(doc, earliestCeilingRate.getParentNode(), addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
+			earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container
