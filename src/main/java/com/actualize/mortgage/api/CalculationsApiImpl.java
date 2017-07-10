@@ -9,7 +9,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -36,7 +35,7 @@ public class CalculationsApiImpl {
     */
 	@RequestMapping(value = "/actualize/transformx/services/ucd/calculatepayments", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
-		LOG.info("user "+SecurityContextHolder.getContext().getAuthentication().getName()+" used Service: Calculations Service");
+		LOG.info("user used Service: Calculations Service");
 		CalculatePayments calculator = new CalculatePayments();
         Document doc = calculator.calculate(xmldoc);
         
@@ -58,7 +57,7 @@ public class CalculationsApiImpl {
 	 */
 	@RequestMapping(value = "/ping", method = { RequestMethod.GET })
     public String checkStatus() throws Exception {
-		LOG.info("user "+SecurityContextHolder.getContext().getAuthentication().getName()+" used Service: ping to Calculations Service");
+		LOG.info("user used Service: ping to Calculations Service");
         return "The service for generating calculations is running and ready to accept your requests";
     }
 
