@@ -238,6 +238,11 @@ public class CalculatePayments {
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalInterestPercent", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalInterestPercentage).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalOfAllPaymentsAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalOfPayments).trim()));
+
+		// Add Five Year comparisons
+		Node integratedDisclosureDetail = getNode(root, addNamespace("//INTEGRATED_DISCLOSURE_DETAIL", mismo));
+		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearTotalOfPaymentsComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearTotalOfPayments).trim()));
+		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearPrincipalReductionComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearPrincipal).trim()));
 		
 		return doc;
 	}
