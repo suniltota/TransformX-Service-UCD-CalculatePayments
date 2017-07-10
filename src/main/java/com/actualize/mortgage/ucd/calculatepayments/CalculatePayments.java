@@ -175,15 +175,15 @@ public class CalculatePayments {
 			if (piLifetime == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing and can't be inserted"));
 			piLifetime = replaceNode(doc, piLifetime.getParentNode(), addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
-			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.firstChangeMonth+2)));
+			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + ((AdjustableInterestRate)rate).firstReset));
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", changes.maxPI).trim()));
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+1)));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container
 		if ("AdjustableRate".equals(amortizationType) && ioTerm > 0) {
-			double maxPI = projected.payments[0].getHighPI();
-			double minPI = projected.payments[0].getLowPI();
+			double maxPI = changes.firstChangeMaxPI;
+			double minPI = changes.firstChangeMinPI;
 			Node pAndIAdjustment = getNode(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
 			if (pAndIAdjustment == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT' is missing and can not be inserted"));

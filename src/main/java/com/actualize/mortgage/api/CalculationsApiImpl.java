@@ -23,7 +23,6 @@ import com.actualize.mortgage.ucd.calculatepayments.CalculatePayments;
  *
  */
 @RestController
-@RequestMapping("/actualize/transformx/services/ucd/calculatepayments")
 public class CalculationsApiImpl {
 	
 	private static final Logger LOGGER = Logger.getLogger(CalculationsApiImpl.class.getName());
@@ -34,7 +33,7 @@ public class CalculationsApiImpl {
     * @return xml Returns XML with projected payments calculated values
     * @throws Exception
     */
-	@RequestMapping(value = "/", method = { RequestMethod.POST })
+	@RequestMapping(value = "/actualize/transformx/services/ucd/calculatepayments", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
 		LOGGER.log(Level.INFO, "Service call: /calculatepayments");
 		CalculatePayments calculator = new CalculatePayments();
