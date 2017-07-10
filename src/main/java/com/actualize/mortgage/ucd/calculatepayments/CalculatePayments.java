@@ -229,7 +229,7 @@ public class CalculatePayments {
 		}
 
 		// Insert entire FEE_SUMMARY_DETAIL container
-		Node feesSummaryDetail = constructNodePath(root, addNamespace("//FEE_INFORMATION/FEES_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
+		Node feesSummaryDetail = constructNodePath(root, addNamespace("//LOAN/FEE_INFORMATION/FEES_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
 		if (feesSummaryDetail == null)
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY_DETAIL' is missing and can't be added"));
 		feesSummaryDetail = replaceNode(doc, feesSummaryDetail.getParentNode(), addNamespace("FEE_SUMMARY_DETAIL", mismo));
@@ -240,7 +240,7 @@ public class CalculatePayments {
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalOfAllPaymentsAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalOfPayments).trim()));
 
 		// Add Five Year comparisons
-		Node integratedDisclosureDetail = getNode(root, addNamespace("//INTEGRATED_DISCLOSURE_DETAIL", mismo));
+		Node integratedDisclosureDetail = constructNodePath(root, addNamespace("//LOAN/DOCUMENT_SPECIFIC_DATA_SETS/DOCUMENT_SPECIFIC_DATA_SET/INTEGRATED_DISCLOSURE_DETAIL", mismo));
 		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearTotalOfPaymentsComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearTotalOfPayments).trim()));
 		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearPrincipalReductionComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearPrincipal).trim()));
 		
