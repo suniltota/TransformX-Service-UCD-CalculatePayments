@@ -159,7 +159,7 @@ public class CalculatePayments {
 			double pmt = 0;
 			if (projected.payments.length > 0)
 				pmt = projected.payments[0].getHighPI();
-			paymentAmount.appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
+			replaceNode(doc, paymentAmount.getParentNode(), addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
 		}
 		
 		// Insert CeilingRatePercentEarliestEffectiveMonthsCount data point (other data points must be present to model AdjustableRate)
@@ -167,7 +167,7 @@ public class CalculatePayments {
 			Node earliestCeilingRate = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
 			if (earliestCeilingRate == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'CeilingRatePercentEarliestEffectiveMonthsCount' can't be inserted"));
-			earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
+			replaceNode(doc, earliestCeilingRate.getParentNode(), addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
@@ -206,7 +206,7 @@ public class CalculatePayments {
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for Fixed IO
 		if ("Fixed".equals(amortizationType) && ioTerm > 0) {
 			double maxPI = projected.high.getValue(ioTerm, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
-			Node pAndIAdjustment = getNode(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
+			Node pAndIAdjustment = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
 			if (pAndIAdjustment == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT' is missing and can not be inserted"));
 			Node pAndIPerChangeRules = replaceNode(doc, pAndIAdjustment, addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES", mismo));
@@ -217,7 +217,7 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PROJECTED_PAYMENTS container
-		Node integratedDisclosure = getNode(root, addNamespace("//INTEGRATED_DISCLOSURE", mismo));
+		Node integratedDisclosure = constructNodePath(root, addNamespace("//LOAN/DOCUMENT_SPECIFIC_DATA_SETS/DOCUMENT_SPECIFIC_DATA_SET/INTEGRATED_DISCLOSURE", mismo));
 		if (integratedDisclosure == null)
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'INTEGRATED_DISCLOSURE' is missing and can not be inserted"));
 		Node projectedPayments = replaceNode(doc, integratedDisclosure, addNamespace("PROJECTED_PAYMENTS", mismo));
