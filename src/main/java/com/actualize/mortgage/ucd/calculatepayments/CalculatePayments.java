@@ -152,22 +152,20 @@ public class CalculatePayments {
 		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
 
 		// Insert InitialPrincipalAndInterestPaymentAmount data point (other data points in PAYMENT_RULE are not calculations)
-		Node paymentAmount = constructNodePath(root, addNamespace("//LOAN/PAYMENT/PAYMENT_RULE/InitialPrincipalAndInterestPaymentAmount", mismo));
-		if (paymentAmount == null)
-			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'InitialPrincipalAndInterestPaymentAmount' can't be inserted"));
-		else {
-			double pmt = 0;
-			if (projected.payments.length > 0)
-				pmt = projected.payments[0].getHighPI();
-			replaceNode(doc, paymentAmount.getParentNode(), addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", pmt).trim()));
-		}
+		Node paymentRule = constructNodePath(root, addNamespace("//LOAN/PAYMENT/PAYMENT_RULE", mismo));
+		if (paymentRule == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'PAYMENT_RULE' can't be inserted"));
+		if (projected.payments.length == 0)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "no projected payments generated"));
+		replaceNode(doc, paymentRule, addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", projected.payments[0].getHighPI()).trim()));
 		
 		// Insert CeilingRatePercentEarliestEffectiveMonthsCount data point (other data points must be present to model AdjustableRate)
 		if ("AdjustableRate".equals(amortizationType)) {
-			Node earliestCeilingRate = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
-			if (earliestCeilingRate == null)
-				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'CeilingRatePercentEarliestEffectiveMonthsCount' can't be inserted"));
-			replaceNode(doc, earliestCeilingRate.getParentNode(), addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo)).appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
+			Node interestRateLifetimeAdjustment = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE", mismo));
+			if (interestRateLifetimeAdjustment == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' can't be inserted"));
+			Node earliestCeilingRate = replaceNode(doc, interestRateLifetimeAdjustment, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
+			earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
