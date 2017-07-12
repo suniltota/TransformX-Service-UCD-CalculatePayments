@@ -170,8 +170,8 @@ public class CalculatePayments {
 			earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
 		}
 		
-		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container
-		if ("AdjustableRate".equals(amortizationType) || ioTerm > 0) {
+		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
+		if ("AdjustableRate".equals(amortizationType) && ioTerm > 0) {
 			int firstReset = ((AdjustableInterestRate)rate).firstReset;
 			Node piLifetime = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
 			if (piLifetime == null)
@@ -182,7 +182,7 @@ public class CalculatePayments {
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+2)));
 		}
 		
-		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container
+		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for IO ARM
 		if ("AdjustableRate".equals(amortizationType) && ioTerm > 0) {
 			int firstReset = ((AdjustableInterestRate)rate).firstReset;
 			int subsequentReset = ((AdjustableInterestRate)rate).subsequentReset;
@@ -201,6 +201,19 @@ public class CalculatePayments {
 			Node subsequentPAndIAdjustment = pAndIPerChangeRules.appendChild(doc.createElement(addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULE", mismo)));
 			subsequentPAndIAdjustment.appendChild(doc.createElement(addNamespace("AdjustmentRuleType", mismo))).appendChild(doc.createTextNode("Subsequent"));
 			subsequentPAndIAdjustment.appendChild(doc.createElement(addNamespace("PerChangePrincipalAndInterestPaymentAdjustmentFrequencyMonthsCount", mismo))).appendChild(doc.createTextNode("" + subsequentReset));
+		}
+		
+		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for Fixed IO
+		if ("Fixed".equals(amortizationType) && ioTerm > 0) {
+			double maxPI = projected.high.getValue(ioTerm, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
+			Node pAndIAdjustment = getNode(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
+			if (pAndIAdjustment == null)
+				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT' is missing and can not be inserted"));
+			Node pAndIPerChangeRules = replaceNode(doc, pAndIAdjustment, addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES", mismo));
+			Node firstPAndIAdjustment = pAndIPerChangeRules.appendChild(doc.createElement(addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULE", mismo)));
+			firstPAndIAdjustment.appendChild(doc.createElement(addNamespace("AdjustmentRuleType", mismo))).appendChild(doc.createTextNode("First"));
+			firstPAndIAdjustment.appendChild(doc.createElement(addNamespace("PerChangeMaximumPrincipalAndInterestPaymentAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", maxPI).trim()));
+			firstPAndIAdjustment.appendChild(doc.createElement(addNamespace("PerChangePrincipalAndInterestPaymentAdjustmentFrequencyMonthsCount", mismo))).appendChild(doc.createTextNode("" + ioTerm));
 		}
 		
 		// Insert entire PROJECTED_PAYMENTS container
