@@ -169,7 +169,7 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
-		if ("AdjustableRate".equals(amortizationType) && ioTerm > 0) {
+		if ("AdjustableRate".equals(amortizationType)) {
 			int firstReset = ((AdjustableInterestRate)rate).firstReset;
 			Node piLifetime = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
 			if (piLifetime == null)
@@ -181,7 +181,7 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for IO ARM
-		if ("AdjustableRate".equals(amortizationType) && ioTerm > 0) {
+		if ("AdjustableRate".equals(amortizationType)) {
 			int firstReset = ((AdjustableInterestRate)rate).firstReset;
 			int subsequentReset = ((AdjustableInterestRate)rate).subsequentReset;
 			double maxPI = projected.high.getValue(firstReset, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
