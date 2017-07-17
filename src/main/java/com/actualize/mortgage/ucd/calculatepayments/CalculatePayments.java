@@ -240,10 +240,10 @@ public class CalculatePayments {
 		}
 
 		// Insert entire FEE_SUMMARY_DETAIL container
-		Node feesSummaryDetail = constructNodePath(root, addNamespace("//LOAN/FEE_INFORMATION/FEES_SUMMARY/FEE_SUMMARY_DETAIL", mismo));
-		if (feesSummaryDetail == null)
-			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY_DETAIL' is missing and can't be added"));
-		feesSummaryDetail = replaceNode(doc, feesSummaryDetail.getParentNode(), addNamespace("FEE_SUMMARY_DETAIL", mismo));
+		Node feesSummary = constructNodePath(root, addNamespace("//LOAN/FEE_INFORMATION/FEES_SUMMARY", mismo));
+		if (feesSummary == null)
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY' is missing and can't be added"));
+		Node feesSummaryDetail = replaceNode(doc, feesSummary, addNamespace("FEE_SUMMARY_DETAIL", mismo));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
