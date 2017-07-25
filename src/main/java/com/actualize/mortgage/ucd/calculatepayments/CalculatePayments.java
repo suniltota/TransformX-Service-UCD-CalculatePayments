@@ -266,7 +266,7 @@ public class CalculatePayments {
 		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, unless DisclosedFullyIndexedRatePercent is present
 		if (initialRate == 0)
 			initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
-		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null) - 1; // REQUIRED, if AmortizationType=AdjustableRate
+		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
 		int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
 		double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
 		double subsequentResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='Subsequent']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
@@ -281,9 +281,19 @@ public class CalculatePayments {
 	}
 	
 	private MortgageInsurance createMortgageInsurance(Node root, String mismo, double loanAmount, int loanTerm) {
-		int miAmount = getIntegerValue(root, addNamespace("//PROJECTED_PAYMENT/ProjectedPaymentMIPaymentAmount", mismo), 0); // REQUIRED, if MI exists
-		if (miAmount == 0)
-			return null;
+		int duration1 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor1 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRatePercent", mismo), 0.0);
+		int duration2 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor2 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRatePercent", mismo), 0.0);
+		int duration3 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor3 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRatePercent", mismo), 0.0);
+		if (duration1 == 0) {
+			int miAmount = getIntegerValue(root, addNamespace("//PROJECTED_PAYMENT/ProjectedPaymentMIPaymentAmount", mismo), 0); // REQUIRED, if MI exists
+			if (miAmount == 0)
+				errors.add(new CalculationError(CalculationErrorType.MISSING_DATA, "required datapoint '//PROJECTED_PAYMENT/ProjectedPaymentMIPaymentAmount' or  container '//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']' is missing"));
+			factor1 = miAmount*12/loanAmount;
+			duration1 = loanTerm;
+		}
 		String miTerminationDate = getStringValue(root, addNamespace("//MI_DATA_DETAIL/MIScheduledTerminationDate", mismo)); // REQUIRED, if terminating MI at a scheduled date
 		String closingDate = getStringValue(root, addNamespace("//CLOSING_INFORMATION_DETAIL/ClosingDate", mismo)); // REQUIRED, if terminating MI at a scheduled date
 		if ("".equals(miTerminationDate) || "".equals(closingDate)) {
@@ -292,9 +302,9 @@ public class CalculatePayments {
 				homeValue = getDoubleValue(root, addNamespace("//SALES_CONTRACT_DETAIL/RealPropertyAmount", mismo), 0.0);
 			if (homeValue == 0.0)
 				homeValue = getDoubleValue(root, addNamespace("//PROPERTY_DETAIL/PropertyEstimatedValueAmount", mismo), 0.0);
-			return new PrivateMortgageInsurance(homeValue, loanTerm, miAmount*12/loanAmount, 0, 0, 0, 0);
+			return new PrivateMortgageInsurance(homeValue, duration1, factor1, duration2, factor2, duration3, factor3);
 		}
-		return new PrivateMortgageInsurance(calculateMIDuration(closingDate, miTerminationDate), loanTerm, miAmount*12/loanAmount, 0, 0, 0, 0);
+		return new PrivateMortgageInsurance(calculateMIDuration(closingDate, miTerminationDate), duration1, factor1, duration2, factor2, duration3, factor3);
 	}
 	
 	private int calculateMIDuration(String closingDate, String miTerminationDate) {
