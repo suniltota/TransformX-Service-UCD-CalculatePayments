@@ -54,7 +54,7 @@ public class DisclosureModel implements Serializable {
 	 * @return the end
 	 */
 	public int getEnd() {
-		return (end+11)/12;
+		return end/12 + 1;
 	}
 
 	/**

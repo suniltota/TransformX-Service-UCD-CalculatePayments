@@ -58,7 +58,6 @@ public class ProjectedPayments {
 		if (mi != null)
 			mi.addMortgageInsurance(base);
 		double oldMi = 0;
-		int periods = base.length;
 		DisclosureModel pd = null;
 		LinkedList<DisclosureModel> disclosureModels = new LinkedList<DisclosureModel>();
 		for (int i = 0; i < base.length-1; i++) {
@@ -67,8 +66,8 @@ public class ProjectedPayments {
 			double miPmt = base.getValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT);
 			if (pd == null || lowPI != pd.getLowPI() || highPI != pd.getHighPI() || (oldMi!= 0 && miPmt==0)) {
 				if (pd != null)
-					pd.setEnd(i);
-				pd = new DisclosureModel(i, periods, lowPI, highPI, miPmt);
+					pd.setEnd(i-1);
+				pd = new DisclosureModel(i, base.length-1, lowPI, highPI, miPmt);
 				disclosureModels.add(pd);
 			}
 			oldMi = miPmt;
