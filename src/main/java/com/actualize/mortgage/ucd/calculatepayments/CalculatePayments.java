@@ -175,7 +175,7 @@ public class CalculatePayments {
 			if (piLifetime == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing and can't be inserted"));
 			piLifetime = replaceNode(doc, piLifetime.getParentNode(), addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
-			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + (firstReset+2)));
+			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + (firstReset+1)));
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", changes.maxPI).trim()));
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+2)));
 		}
