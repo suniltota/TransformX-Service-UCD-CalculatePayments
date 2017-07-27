@@ -165,7 +165,7 @@ public class CalculatePayments {
 			if (interestRateLifetimeAdjustment == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' can't be inserted"));
 			Node earliestCeilingRate = replaceNode(doc, interestRateLifetimeAdjustment, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
-			earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
+			earliestCeilingRate.appendChild(doc.createTextNode("" + changes.maxRateFirstMonth));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
@@ -177,7 +177,7 @@ public class CalculatePayments {
 			piLifetime = replaceNode(doc, piLifetime.getParentNode(), addNamespace("PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
 			piLifetime.appendChild(doc.createElement(addNamespace("FirstPrincipalAndInterestPaymentChangeMonthsCount", mismo))).appendChild(doc.createTextNode("" + (firstReset+1)));
 			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", changes.maxPI).trim()));
-			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+2)));
+			piLifetime.appendChild(doc.createElement(addNamespace("PrincipalAndInterestPaymentMaximumAmountEarliestEffectiveMonthsCount", mismo))).appendChild(doc.createTextNode("" + (changes.maxPIFirstMonth+1)));
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for IO ARM
