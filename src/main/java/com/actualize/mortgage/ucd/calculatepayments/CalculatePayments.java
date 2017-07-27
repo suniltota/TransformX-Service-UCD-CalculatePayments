@@ -281,12 +281,12 @@ public class CalculatePayments {
 	}
 	
 	private MortgageInsurance createMortgageInsurance(Node root, String mismo, double loanAmount, int loanTerm) {
-		int duration1 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRateDurationMonthsCount", mismo), 0);
-		double factor1 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRatePercent", mismo), 0.0);
-		int duration2 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRateDurationMonthsCount", mismo), 0);
-		double factor2 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRatePercent", mismo), 0.0);
-		int duration3 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRateDurationMonthsCount", mismo), 0);
-		double factor3 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRatePercent", mismo), 0.0);
+		int duration1 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor1 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='First']/MIPremiumRatePercent", mismo), 0.0)/1200;
+		int duration2 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor2 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Second']/MIPremiumRatePercent", mismo), 0.0)/1200;
+		int duration3 = getIntegerValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRateDurationMonthsCount", mismo), 0);
+		double factor3 = getDoubleValue(root, addNamespace("//MI_DATA/MI_PREMIUMS/MI_PREMIUM/MI_PREMIUM_DETAIL[MIPremiumPeriodType='Third']/MIPremiumRatePercent", mismo), 0.0)/1200;
 		if (duration1 == 0) {
 			int miAmount = getIntegerValue(root, addNamespace("//PROJECTED_PAYMENT/ProjectedPaymentMIPaymentAmount", mismo), 0); // REQUIRED, if MI exists
 			if (miAmount == 0)

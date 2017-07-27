@@ -46,7 +46,7 @@ public class PrivateMortgageInsurance extends MortgageInsurance {
 	private CashFlowResult addMortgageInsuraceToLTV(CashFlowResult baseCashFlow) {
 		double loanAmount = baseCashFlow.getValue(0, CashFlowInfo.BALANCE);
 		for (int i = 0; i < baseCashFlow.length; i++) {
-			if (baseCashFlow.getValue(0, CashFlowInfo.BALANCE) / homeValue < 0.8)
+			if (baseCashFlow.getValue(i, CashFlowInfo.BALANCE) / homeValue < 0.8)
 				break;
 			baseCashFlow.addValue(i, CashFlowInfo.MORTGAGE_INSURANCE_PAYMENT, getFactor(i) * loanAmount);
 		}
@@ -63,9 +63,9 @@ public class PrivateMortgageInsurance extends MortgageInsurance {
 	private double getFactor(int period) {
 		if (period < firstTerm)
 			return firstFactor;
-		if (period < secondTerm)
+		if (period < firstTerm + secondTerm)
 			return secondFactor;
-		if (period < thirdTerm)
+		if (period < firstTerm + secondTerm + thirdTerm)
 			return thirdFactor;
 		return 0;
 	}
