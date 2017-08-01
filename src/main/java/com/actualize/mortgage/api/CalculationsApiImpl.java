@@ -36,8 +36,9 @@ public class CalculationsApiImpl {
 	@RequestMapping(value = "/actualize/transformx/services/ucd/calculatepayments", method = { RequestMethod.POST })
 	public String calculatePayments(@RequestBody String xmldoc) throws Exception {
 		LOG.info("user used Service: Calculations Service");
+		boolean isLE = false;  // TODO add parameter to specify LE or CD calculations - 
 		CalculatePayments calculator = new CalculatePayments();
-        Document doc = calculator.calculate(xmldoc);
+        Document doc = calculator.calculate(xmldoc, isLE);
         
         Transformer tr = TransformerFactory.newInstance().newTransformer();
 	        tr.setOutputProperty(OutputKeys.INDENT, "yes");

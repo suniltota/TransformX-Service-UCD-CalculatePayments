@@ -49,7 +49,7 @@ public class CalculatePayments {
 	private XPath xpath = null;
 	private LinkedList<CalculationError> errors = new LinkedList<CalculationError>();
 
-	public Document calculate(String xmldoc) throws Exception{
+	public Document calculate(String xmldoc, boolean isLE) throws Exception{
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         DocumentBuilder builder;  
@@ -57,7 +57,7 @@ public class CalculatePayments {
         {  
             builder = factory.newDocumentBuilder();  
             Document doc = builder.parse(new InputSource(new StringReader(xmldoc)));
-            return calculate(doc);
+            return calculate(doc, isLE);
         } catch (Exception e) {  
         	ErrorsListModel errorsList = new ErrorsListModel();
         	List<ErrorModel> errorList = new LinkedList<ErrorModel>();
@@ -84,7 +84,7 @@ public class CalculatePayments {
         }
 	}
 
-	public Document calculate(Document doc) throws NumberFormatException, XPathExpressionException {
+	public Document calculate(Document doc, boolean isLE) throws NumberFormatException, XPathExpressionException {
 		Node root = doc.getDocumentElement();
 		xpath = createXPath(root);
 		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
@@ -112,10 +112,19 @@ public class CalculatePayments {
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
 		double escrow = getSumValue(root, addNamespace("//ESCROW_ITEM_DETAIL/EscrowMonthlyPaymentAmount", mismo));
 		double loanCostsTotal = getSumValue(root, addNamespace("//INTEGRATED_DISCLOSURE_SECTION_SUMMARY_DETAIL[IntegratedDisclosureSectionType='TotalLoanCosts'][IntegratedDisclosureSubsectionType='LoanCostsSubtotal']/IntegratedDisclosureSectionTotalAmount", mismo));
-		double aprIncludedCostsTotal = getSumValue(root, addNamespace("//ESCROW_ITEM[ESCROW_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/ESCROW_ITEM_PAYMENTS/ESCROW_ITEM_PAYMENT[EscrowItemPaymentPaidByType='Buyer']/EscrowItemActualPaymentAmount", mismo))
-			+ getSumValue(root, addNamespace("//FEE[FEE_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/FEE_PAYMENTS/FEE_PAYMENT[FeePaymentPaidByType='Buyer']/FeeActualPaymentAmount", mismo))
-			+ getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
-		double prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/PrepaidItemType='PrepaidInterest']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
+		double aprIncludedCostsTotal;
+		double prepaidInterest;
+		if (isLE) {
+			aprIncludedCostsTotal = getSumValue(root, addNamespace("//ESCROW_ITEM/ESCROW_ITEM_DETAIL[EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/EscrowItemEstimatedTotalAmount", mismo))
+					+ getSumValue(root, addNamespace("//FEE/FEE_DETAIL[EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/FeeEstimatedTotalAmount", mismo))
+					+ getSumValue(root, addNamespace("//PREPAID_ITEM/PREPAID_ITEM_DETAIL[EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PrepaidItemEstimatedTotalAmount", mismo));
+			prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM/PREPAID_ITEM_DETAIL[PrepaidItemType='PrepaidInterest']/PrepaidItemEstimatedTotalAmount", mismo));
+		} else {
+			aprIncludedCostsTotal = getSumValue(root, addNamespace("//ESCROW_ITEM[ESCROW_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/ESCROW_ITEM_PAYMENTS/ESCROW_ITEM_PAYMENT[EscrowItemPaymentPaidByType='Buyer']/EscrowItemActualPaymentAmount", mismo))
+					+ getSumValue(root, addNamespace("//FEE[FEE_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/FEE_PAYMENTS/FEE_PAYMENT[FeePaymentPaidByType='Buyer']/FeeActualPaymentAmount", mismo))
+					+ getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
+			prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/PrepaidItemType='PrepaidInterest']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
+		}
 		
 		// Create payment model
 		Payment payment = null;
@@ -245,15 +254,20 @@ public class CalculatePayments {
 			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'FEE_SUMMARY' is missing and can't be added"));
 		Node feesSummaryDetail = replaceNode(doc, feesSummary, addNamespace("FEE_SUMMARY_DETAIL", mismo));
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("APRPercent", mismo))).appendChild(doc.createTextNode(String.format("%7.4f", calcs.apr).trim()));
-		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
-		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
+		if (!isLE) {
+			feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalAmountFinancedAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.amountFinanced).trim()));
+			feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalFinanceChargeAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.financeCharge).trim()));
+		}
 		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalInterestPercent", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalInterestPercentage).trim()));
-		feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalOfAllPaymentsAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalOfPayments).trim()));
+		if (!isLE)
+			feesSummaryDetail.appendChild(doc.createElement(addNamespace("FeeSummaryTotalOfAllPaymentsAmount", mismo))).appendChild(doc.createTextNode(String.format("%9.2f", calcs.totalOfPayments).trim()));
 
 		// Add Five Year comparisons
-		Node integratedDisclosureDetail = constructNodePath(root, addNamespace("//LOAN/DOCUMENT_SPECIFIC_DATA_SETS/DOCUMENT_SPECIFIC_DATA_SET/INTEGRATED_DISCLOSURE/INTEGRATED_DISCLOSURE_DETAIL", mismo));
-		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearTotalOfPaymentsComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearTotalOfPayments).trim()));
-		replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearPrincipalReductionComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearPrincipal).trim()));
+		if (isLE) {
+			Node integratedDisclosureDetail = constructNodePath(root, addNamespace("//LOAN/DOCUMENT_SPECIFIC_DATA_SETS/DOCUMENT_SPECIFIC_DATA_SET/INTEGRATED_DISCLOSURE/INTEGRATED_DISCLOSURE_DETAIL", mismo));
+			replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearTotalOfPaymentsComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearTotalOfPayments).trim()));
+			replaceNode(doc, integratedDisclosureDetail, addNamespace("FiveYearPrincipalReductionComparisonAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", calcs.fiveYearPrincipal).trim()));
+		}
 		
 		return doc;
 	}
