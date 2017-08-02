@@ -46,10 +46,11 @@ import com.actualize.mortgage.ucd.calculationutils.CalculationErrorType;
 
 public class CalculatePayments {
 	private static final String MISMO_URL = "http://www.mismo.org/residential/2009/schemas";
+	private static final String GSE_URL = "http://www.datamodelextension.org";
 	private XPath xpath = null;
 	private LinkedList<CalculationError> errors = new LinkedList<CalculationError>();
 
-	public Document calculate(String xmldoc, boolean isLE) throws Exception{
+	public Document calculate(String xmldoc) throws Exception{
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         factory.setNamespaceAware(true);
         DocumentBuilder builder;  
@@ -57,6 +58,18 @@ public class CalculatePayments {
         {  
             builder = factory.newDocumentBuilder();  
             Document doc = builder.parse(new InputSource(new StringReader(xmldoc)));
+            boolean isLE = false;
+            String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
+            NodeList nodes = getNodeList(doc.getDocumentElement(), addNamespace("//DOCUMENT_CLASSIFICATION/DOCUMENT_CLASSES/DOCUMENT_CLASS", mismo));
+            for (int i = 0; i < nodes.getLength(); i++) {
+            	String doctype = getStringValue(nodes.item(i), addNamespace("DocumentTypeOtherDescription", mismo));
+            	if (doctype.startsWith("ClosingDisclosure:"))
+            		break;
+            	else if (doctype.startsWith("LoanEstimate:")) {
+            		isLE = true;
+            		break;
+            	}
+            }
             return calculate(doc, isLE);
         } catch (Exception e) {  
         	ErrorsListModel errorsList = new ErrorsListModel();
@@ -88,7 +101,16 @@ public class CalculatePayments {
 		Node root = doc.getDocumentElement();
 		xpath = createXPath(root);
 		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
+		String gse = xpath.getNamespaceContext().getPrefix(GSE_URL);
 		
+		// Check for errors
+		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/SeasonalPaymentFeatureIndicator", mismo))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "seasonal payment feature not supported"));
+		if (!"".equals(getStringValue(root, addNamespace("//TotalStepPaymentCount", gse))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "step payment feature not supported"));
+		if ("true".equals(getStringValue(root, addNamespace("//PAYMENT/PAYMENT_RULE/PaymentOptionIndicator", mismo))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "optional payment feature not supported"));
+
 		// Obtain calculation parameters
 		int ioTerm = 0;
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/InterestOnlyIndicator", mismo)))) // REQUIRED
@@ -153,6 +175,10 @@ public class CalculatePayments {
 		
 		// Create loan
 		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
+		
+		// Check for errors before calculating
+		if (!errors.isEmpty())
+			return null;
 
 		// Run calculations
 		double fullyIndexedRate = loan.interestRate.getInitialRate();
