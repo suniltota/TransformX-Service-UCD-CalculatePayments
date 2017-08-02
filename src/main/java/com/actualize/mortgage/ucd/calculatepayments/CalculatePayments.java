@@ -58,19 +58,9 @@ public class CalculatePayments {
         {  
             builder = factory.newDocumentBuilder();  
             Document doc = builder.parse(new InputSource(new StringReader(xmldoc)));
-            boolean isLE = false;
-            String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
-            NodeList nodes = getNodeList(doc.getDocumentElement(), addNamespace("//DOCUMENT_CLASSIFICATION/DOCUMENT_CLASSES/DOCUMENT_CLASS", mismo));
-            for (int i = 0; i < nodes.getLength(); i++) {
-            	String doctype = getStringValue(nodes.item(i), addNamespace("DocumentTypeOtherDescription", mismo));
-            	if (doctype.startsWith("ClosingDisclosure:"))
-            		break;
-            	else if (doctype.startsWith("LoanEstimate:")) {
-            		isLE = true;
-            		break;
-            	}
-            }
-            return calculate(doc, isLE);
+    		xpath = createXPath(doc.getDocumentElement());
+    		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
+            return calculate(doc, isDocTypeLoanEstimate(doc, mismo));
         } catch (Exception e) {  
         	ErrorsListModel errorsList = new ErrorsListModel();
         	List<ErrorModel> errorList = new LinkedList<ErrorModel>();
@@ -99,7 +89,6 @@ public class CalculatePayments {
 
 	public Document calculate(Document doc, boolean isLE) throws NumberFormatException, XPathExpressionException {
 		Node root = doc.getDocumentElement();
-		xpath = createXPath(root);
 		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
 		String gse = xpath.getNamespaceContext().getPrefix(GSE_URL);
 		
@@ -300,6 +289,18 @@ public class CalculatePayments {
 
 	public CalculationError[] getErrors() {
 		return errors.toArray(new CalculationError[errors.size()]);
+	}
+
+	boolean isDocTypeLoanEstimate(Document doc, String mismo) {
+		NodeList nodes = getNodeList(doc.getDocumentElement(), addNamespace("//DOCUMENT_CLASSIFICATION/DOCUMENT_CLASSES/DOCUMENT_CLASS", mismo));
+	    for (int i = 0; i < nodes.getLength(); i++) {
+	    	String doctype = getStringValue(nodes.item(i), addNamespace("DocumentTypeOtherDescription", mismo));
+	    	if (doctype.startsWith("ClosingDisclosure:"))
+	    		break;
+	    	else if (doctype.startsWith("LoanEstimate:"))
+	    		return true;
+	    }
+	    return false;
 	}
 	
 	private InterestRate createAdjustableInterestRateModel(Node root, String mismo) {
