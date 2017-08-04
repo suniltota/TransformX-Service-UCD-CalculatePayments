@@ -86,24 +86,18 @@ public class CalculatePayments {
         	return doc;
         }
 	}
-
-	public Document calculate(Document doc, boolean isLE) throws NumberFormatException, XPathExpressionException {
-		Node root = doc.getDocumentElement();
-		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
-		String gse = xpath.getNamespaceContext().getPrefix(GSE_URL);
+	
+	private Loan createLoan(Node root, String mismo) {
 		
-		// Check for errors
-		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/SeasonalPaymentFeatureIndicator", mismo))))
-			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "seasonal payment feature not supported"));
-		if (!"".equals(getStringValue(root, addNamespace("//TotalStepPaymentCount", gse))))
-			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "step payment feature not supported"));
-		if ("true".equals(getStringValue(root, addNamespace("//PAYMENT/PAYMENT_RULE/PaymentOptionIndicator", mismo))))
-			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "optional payment feature not supported"));
+		// Obtain loan amount
+		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
 
-		// Obtain calculation parameters
+		// Get io term
 		int ioTerm = 0;
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/InterestOnlyIndicator", mismo)))) // REQUIRED
 			ioTerm = getIntegerValue(root, addNamespace("//INTEREST_ONLY/InterestOnlyTermMonthsCount", mismo), null); // REQUIRED, if InterestOnlyIndicator = 'true'
+		
+		// Obtain loan and amortization terms
 		int loanTerm = getIntegerValue(root, addNamespace("//MATURITY_RULE/LoanMaturityPeriodCount", mismo), null); // REQUIRED
 		int amortizationTerm = loanTerm;
 		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/BalloonIndicator", mismo)))) { // REQUIRED
@@ -119,8 +113,57 @@ public class CalculatePayments {
 				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization period type '" + amortizationPeriodType + "' not supported"));
 			}
 		}
-		double loanAmount = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteAmount", mismo), null); // REQUIRED
+		
+		// Create payment model
+		Payment payment = null;
+		if (ioTerm == 0)
+			payment = new AmortizingPayment(amortizationTerm);
+		else if (ioTerm < loanTerm)
+			payment = new CompositePayment(ioTerm, new InterestOnlyPayment(1), amortizationTerm, new AmortizingPayment(amortizationTerm - ioTerm));
+		else
+			payment = new InterestOnlyPayment(amortizationTerm);
+		
+		// Create interest rate model
 		String amortizationType = getStringValue(root, addNamespace("//AMORTIZATION_RULE/AmortizationType", mismo)); // REQUIRED
+		InterestRate rate = null;
+		switch (amortizationType) {
+			case "Fixed":
+				rate = createFixedInterestRateModel(root, mismo);
+				break;
+			case "AdjustableRate":
+				rate = createAdjustableInterestRateModel(root, mismo);
+				break;
+			default:
+				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization type '" + amortizationType + "' not supported"));
+		}
+
+		return new Loan(loanAmount, loanTerm, payment, rate);
+	}
+
+	public Document calculate(Document doc, boolean isLE) throws NumberFormatException, XPathExpressionException {
+		Node root = doc.getDocumentElement();
+		String mismo = xpath.getNamespaceContext().getPrefix(MISMO_URL);
+		String gse = xpath.getNamespaceContext().getPrefix(GSE_URL);
+		
+		// Check for errors
+		if ("true".equals(getStringValue(root, addNamespace("//LOAN_DETAIL/SeasonalPaymentFeatureIndicator", mismo))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "seasonal payment feature not supported"));
+		if (!"".equals(getStringValue(root, addNamespace("//TotalStepPaymentCount", gse))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "step payment feature not supported"));
+		if ("true".equals(getStringValue(root, addNamespace("//PAYMENT/PAYMENT_RULE/PaymentOptionIndicator", mismo))))
+			errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "optional payment feature not supported"));
+		
+		// Create loan
+		Loan loan = createLoan(root, mismo);
+		
+		// Check for errors before calculating
+		if (!errors.isEmpty())
+			return null;
+
+		// Create MI model
+		MortgageInsurance insurance = createMortgageInsurance(root, mismo, loan.loanAmount, loan.loanTerm);
+
+		// Obtain costs
 		double escrow = getSumValue(root, addNamespace("//ESCROW_ITEM_DETAIL/EscrowMonthlyPaymentAmount", mismo));
 		double loanCostsTotal = getSumValue(root, addNamespace("//INTEGRATED_DISCLOSURE_SECTION_SUMMARY_DETAIL[IntegratedDisclosureSectionType='TotalLoanCosts'][IntegratedDisclosureSubsectionType='LoanCostsSubtotal']/IntegratedDisclosureSectionTotalAmount", mismo));
 		double aprIncludedCostsTotal;
@@ -136,44 +179,19 @@ public class CalculatePayments {
 					+ getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/EXTENSION/MISMO/PaymentIncludedInAPRIndicator='true']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
 			prepaidInterest = getSumValue(root, addNamespace("//PREPAID_ITEM[PREPAID_ITEM_DETAIL/PrepaidItemType='PrepaidInterest']/PREPAID_ITEM_PAYMENTS/PREPAID_ITEM_PAYMENT[PrepaidItemPaymentPaidByType='Buyer']/PrepaidItemActualPaymentAmount", mismo));
 		}
-		
-		// Create payment model
-		Payment payment = null;
-		if (ioTerm == 0)
-			payment = new AmortizingPayment(amortizationTerm);
-		else if (ioTerm < loanTerm)
-			payment = new CompositePayment(ioTerm, new InterestOnlyPayment(1), amortizationTerm, new AmortizingPayment(amortizationTerm - ioTerm));
-		else
-			payment = new InterestOnlyPayment(amortizationTerm);
-		
-		// Create interest rate model
-		InterestRate rate = null;
-		switch (amortizationType) {
-			case "Fixed":
-				rate = createFixedInterestRateModel(root, mismo);
-				break;
-			case "AdjustableRate":
-				rate = createAdjustableInterestRateModel(root, mismo);
-				break;
-			default:
-				errors.add(new CalculationError(CalculationErrorType.NOT_IMPLEMENTED, "amortization type '" + amortizationType + "' not supported"));
-		}
-
-		// Create MI model
-		MortgageInsurance insurance = createMortgageInsurance(root, mismo, loanAmount, loanTerm);
-		
-		// Create loan
-		Loan loan = new Loan(loanAmount, loanTerm, payment, rate);
-		
-		// Check for errors before calculating
-		if (!errors.isEmpty())
-			return null;
 
 		// Run calculations
-		double fullyIndexedRate = loan.interestRate.getInitialRate();
-		LoanCalculations calcs = new LoanCalculations(loan, insurance, fullyIndexedRate, loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
-		PaymentChanges changes = new PaymentChanges(loan);
-		ProjectedPayments projected = new ProjectedPayments(loan, insurance);
+		LoanCalculations calcs = null;
+		PaymentChanges changes = null;
+		ProjectedPayments projected = null;
+		try {
+			calcs = new LoanCalculations(loan, insurance, loan.interestRate.getInitialRate(), loanCostsTotal, aprIncludedCostsTotal, prepaidInterest);
+			changes = new PaymentChanges(loan);
+			projected = new ProjectedPayments(loan, insurance);
+		} catch (Exception e) {
+			errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "undefined calculation error"));
+			return null;
+		}
 
 		// Insert InitialPrincipalAndInterestPaymentAmount data point (other data points in PAYMENT_RULE are not calculations)
 		Node paymentRule = constructNodePath(root, addNamespace("//LOAN/PAYMENT/PAYMENT_RULE", mismo));
@@ -184,7 +202,8 @@ public class CalculatePayments {
 		replaceNode(doc, paymentRule, addNamespace("InitialPrincipalAndInterestPaymentAmount", mismo)).appendChild(doc.createTextNode(String.format("%9.2f", projected.payments[0].getHighPI()).trim()));
 		
 		// Insert CeilingRatePercentEarliestEffectiveMonthsCount data point (other data points must be present to model AdjustableRate)
-		if ("AdjustableRate".equals(amortizationType)) {
+		String rateType = loan.interestRate.getClass().getName();
+		if ("AdjustableInterestRate".equals(rateType)) {
 			Node interestRateLifetimeAdjustment = constructNodePath(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE", mismo));
 			if (interestRateLifetimeAdjustment == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' can't be inserted"));
@@ -193,8 +212,8 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE container for IO ARM
-		if ("AdjustableRate".equals(amortizationType)) {
-			int firstReset = ((AdjustableInterestRate)rate).firstReset;
+		if ("AdjustableInterestRate".equals(rateType)) {
+			int firstReset = ((AdjustableInterestRate)loan.interestRate).firstReset;
 			Node piLifetime = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE", mismo));
 			if (piLifetime == null)
 				errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "required container 'PRINCIPAL_AND_INTEREST_PAYMENT_LIFETIME_ADJUSTMENT_RULE' is missing and can't be inserted"));
@@ -205,9 +224,9 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for IO ARM
-		if ("AdjustableRate".equals(amortizationType)) {
-			int firstReset = ((AdjustableInterestRate)rate).firstReset;
-			int subsequentReset = ((AdjustableInterestRate)rate).subsequentReset;
+		if ("AdjustableInterestRate".equals(rateType)) {
+			int firstReset = ((AdjustableInterestRate)loan.interestRate).firstReset;
+			int subsequentReset = ((AdjustableInterestRate)loan.interestRate).subsequentReset;
 			double maxPI = projected.high.getValue(firstReset, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			double minPI = projected.low.getValue(firstReset, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			Node pAndIAdjustment = getNode(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
@@ -226,7 +245,8 @@ public class CalculatePayments {
 		}
 		
 		// Insert entire PRINCIPAL_AND_INTEREST_PAYMENT_PER_CHANGE_ADJUSTMENT_RULES container for Fixed IO
-		if ("Fixed".equals(amortizationType) && ioTerm > 0) {
+		if ("FixedInterestRate".equals(rateType) && "InterestOnlyPayment".equals(loan.payment.getPayment(0).getClass().getName())) {
+			int ioTerm = ((CompositePayment)loan.payment).paymentSegments[0].endPeriod;
 			double maxPI = projected.high.getValue(ioTerm, CashFlowInfo.PRINCIPAL_AND_INTEREST_PAYMENT);
 			Node pAndIAdjustment = constructNodePath(root, addNamespace("//LOAN/ADJUSTMENT/PRINCIPAL_AND_INTEREST_PAYMENT_ADJUSTMENT", mismo));
 			if (pAndIAdjustment == null)
@@ -296,7 +316,7 @@ public class CalculatePayments {
 	    for (int i = 0; i < nodes.getLength(); i++) {
 	    	String doctype = getStringValue(nodes.item(i), addNamespace("DocumentTypeOtherDescription", mismo));
 	    	if (doctype.startsWith("ClosingDisclosure:"))
-	    		break;
+	    		return false;
 	    	else if (doctype.startsWith("LoanEstimate:"))
 	    		return true;
 	    }
@@ -304,9 +324,7 @@ public class CalculatePayments {
 	}
 	
 	private InterestRate createAdjustableInterestRateModel(Node root, String mismo) {
-		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/NoteRatePercent", mismo), null) / 100.0; // REQUIRED, unless DisclosedFullyIndexedRatePercent is present
-		if (initialRate == 0)
-			initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
+		double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
 		int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
 		int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
 		double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate

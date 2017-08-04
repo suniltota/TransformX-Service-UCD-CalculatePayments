@@ -1,20 +1,17 @@
 package com.actualize.mortgage.domainmodels;
 
 public class CompositePayment extends Payment {
-	private class PaymentSegment {
-		private int endPeriod;
-		private Payment payment;
+	public class PaymentSegment {
+		public final int endPeriod;
+		public final Payment payment;
 		
 		PaymentSegment(int endPeriod, Payment payment) {
 			this.endPeriod = endPeriod;
 			this.payment = payment;
 		}
-		
-		int getEndPeriod() { return endPeriod; }
-		Payment getPayment() { return payment; }
 	}
 	
-	PaymentSegment[] paymentSegments;
+	public final PaymentSegment[] paymentSegments;
 	
 	public CompositePayment(Object... arguments) {
 		int length = arguments.length/2;
@@ -41,21 +38,22 @@ public class CompositePayment extends Payment {
 	@Override
 	public double ppmt(int period, double pmt, double balance, double rate) { return getPayment(period).ppmt(adjustedPeriod(period), pmt, balance, rate); }
 	
-	private Payment getPayment(int period) {
+	@Override
+	public Payment getPayment(int period) {
 		for (int i = 0; i < paymentSegments.length; i++)
-			if (period < paymentSegments[i].getEndPeriod())
-				return paymentSegments[i].getPayment();
+			if (period < paymentSegments[i].endPeriod)
+				return paymentSegments[i].payment;
 			else
-				period -= paymentSegments[i].getEndPeriod();
+				period -= paymentSegments[i].endPeriod;
 		return null;
 	}
 	
 	private int adjustedPeriod(int period) {
 		for (int i = 0; i < paymentSegments.length; i++)
-			if (period < paymentSegments[i].getEndPeriod())
+			if (period < paymentSegments[i].endPeriod)
 				return period;
 			else
-				period -= paymentSegments[i].getEndPeriod();
+				period -= paymentSegments[i].endPeriod;
 		return period;
 	}
 
