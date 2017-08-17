@@ -159,7 +159,7 @@ public class CalculatePayments {
     
     private InterestRate createAdjustableInterestRateModel(Node root, String mismo) {
         double initialRate = getDoubleValue(root, addNamespace("//TERMS_OF_LOAN/DisclosedFullyIndexedRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
-        int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null) - 1; // REQUIRED, if AmortizationType=AdjustableRate
+        int firstResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE/FirstRateChangeMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
         int subsequentResetTerm = getIntegerValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeRateAdjustmentFrequencyMonthsCount", mismo), null); // REQUIRED, if AmortizationType=AdjustableRate
         double firstResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='First']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
         double subsequentResetCap = getDoubleValue(root, addNamespace("//INTEREST_RATE_PER_CHANGE_ADJUSTMENT_RULE[AdjustmentRuleType='Subsequent']/PerChangeMaximumIncreaseRatePercent", mismo), null) / 100.0; // REQUIRED, if AmortizationType=AdjustableRate
@@ -276,7 +276,7 @@ public class CalculatePayments {
             if (interestRateLifetimeAdjustment == null)
                 errors.add(new CalculationError(CalculationErrorType.INTERNAL_ERROR, "data point 'INTEREST_RATE_LIFETIME_ADJUSTMENT_RULE' can't be inserted"));
             Node earliestCeilingRate = replaceNode(doc, interestRateLifetimeAdjustment, addNamespace("CeilingRatePercentEarliestEffectiveMonthsCount", mismo));
-            earliestCeilingRate.appendChild(doc.createTextNode("" + changes.maxRateFirstMonth));
+            earliestCeilingRate.appendChild(doc.createTextNode("" + (changes.maxRateFirstMonth+1)));
         }
     }
 
